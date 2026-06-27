@@ -5,5 +5,3 @@ downloads/
 .env.local
 .DS_Store
 *.log
-PLAN.html
-HOW-IT-WORKS.md

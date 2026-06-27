@@ -4,7 +4,7 @@ A walkthrough of how **ytdown** is actually implemented, based on the code as it
 
 The app is a **React + TypeScript** single-page UI (built with Vite) talking to a small **TypeScript Node server**. The server runs your `yt-dlp` command, streams the live log back to the browser, and hands you the finished file. The download contract is unchanged from the original vanilla version — only the UI and the server's language/build changed.
 
-> **Where this fits in the 3-phase plan:** this walkthrough describes **Phase 1** — the local browser + server app, the part that exists today. **Phase 2** (a macOS native app via **Tauri**, reusing this same React UI through a Rust backend) and **Phase 3** (the VPS deploy) are described in `PLAN.md`. This document will gain a Phase-2 section once that app is built; for now it documents the working Phase-1 code.
+> **Where this fits:** the project has **two phases**, both built — Phase 1 (this local web app) and Phase 2 (a macOS native app via **Tauri**, reusing this same React UI through a Rust backend). This walkthrough documents **Phase 1** in detail; the Phase-2 native backend lives in `src-tauri/src/lib.rs` and mirrors the logic below (validate → run `download.sh` → stream the log → return the file), with the frontend choosing `invoke()` vs `fetch()` via `src/api.ts`. A VPS/hosting phase was considered and **dropped** (see `PLAN.md`).
 
 ---
 
@@ -98,7 +98,7 @@ The JSX then renders conditionally: `{status && …}` shows the result line only
 
 ## 4. The server (`server/server.ts`)
 
-Plain `node:http`, now in TypeScript (run directly by `tsx`, no compile step). It binds to **`127.0.0.1` only** so it is never directly reachable from the network — even on the VPS, where nginx is the public face.
+Plain `node:http`, now in TypeScript (run directly by `tsx`, no compile step). It binds to **`127.0.0.1` only** so it is never reachable from the network.
 
 ### 4.1 Routing
 
@@ -112,7 +112,7 @@ A single `http.createServer` handler dispatches by method + path:
 
 ### 4.2 One job at a time
 
-A module-level `let busy = false` serializes downloads: `handleDownload` rejects with **`429`** while a job runs and flips `busy` back on the child's `error`/`close`. The target VPS has 2 GB RAM, and a single serial job keeps the streamed log unambiguous.
+A module-level `let busy = false` serializes downloads: `handleDownload` rejects with **`429`** while a job runs and flips `busy` back on the child's `error`/`close`. A single serial job keeps the streamed log unambiguous (and is plenty for a single user).
 
 ### 4.3 Validating the request
 
@@ -162,7 +162,7 @@ Because the server depends only on the script's *contract*, you can change any f
 This is the one genuinely new piece versus the vanilla app.
 
 - **Dev** (`npm run dev`): runs two processes via `concurrently` — Vite on `127.0.0.1:5173` (serves the React app with hot-reload) and the API server on `5174` (`PORT=5174 tsx watch server/server.ts`). `vite.config.ts` proxies `/api/*` from 5173 → 5174, so the browser code just calls `fetch("/api/...")` with no CORS. Editing `App.tsx` updates the page instantly; editing `server.ts` restarts the API via `tsx watch`.
-- **Production** (`npm run build` → `npm start`): `build` typechecks both `tsconfig`s and bundles the app to `dist/`; `start` runs `tsx server/server.ts`, which serves `dist/` **and** `/api` on a single port (5173). This is exactly what the VPS (PLAN §9) runs behind nginx.
+- **Production** (`npm run build` → `npm start`): `build` typechecks both `tsconfig`s and bundles the app to `dist/`; `start` runs `tsx server/server.ts`, which serves `dist/` **and** `/api` on a single port (5173).
 
 ---
 
@@ -170,7 +170,7 @@ This is the one genuinely new piece versus the vanilla app.
 
 - **React + TypeScript, Vite-built.** A typed, component-based UI with hot-reload — at the cost of a build step and `node_modules` (the deliberate trade made in v2).
 - **One server for static + API in prod.** No separate static host; `server.ts` serves `dist/` and `/api` together, so deployment is still "one process behind nginx."
-- **Bind to `127.0.0.1`.** The app is never the public face; on the VPS, nginx terminates TLS, enforces the password, and reverse-proxies to it.
+- **Bind to `127.0.0.1`.** The local server is never network-reachable — it only answers the browser on the same machine.
 - **Streaming response as the log.** The single POST response *is* the live log, and its last line is the result — no WebSocket or polling.
 - **Security by construction.** Args-array `spawn` (no shell injection), an explicit host allowlist (no SSRF), `path.basename` on file serving (no path traversal), a 4 KB body cap, and serialized jobs.
 
@@ -194,4 +194,4 @@ npm run build && npm start   # → http://127.0.0.1:5173
 
 Open the page, paste a YouTube link, pick MP3 or MP4, and hit Download. The log streams live; the file drops into `downloads/` and the browser download starts automatically.
 
-For putting this behind HTTPS + a password on a VPS, see `PLAN.md` §9 (Phase B).
+For the macOS native app (Phase 2), see `PLAN.md` §9 and `src-tauri/src/lib.rs`.

@@ -35,7 +35,7 @@
   ul, ol { padding-left: 1.3em; } li { margin: .3em 0; }
   .tag { display: inline-block; font-size: .72rem; letter-spacing: .04em;
          color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
-  .new { color: var(--accent); font-weight: 700; }
+  .ok { color: var(--accent); font-weight: 700; }
   .foot { margin-top: 3em; padding-top: 1em; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
 </style>
 </head>
@@ -44,85 +44,86 @@
 
   <span class="tag">Plan</span>
   <h1>ytdown</h1>
-  <p class="lead">A small app to download a YouTube video as <strong>MP3</strong> (audio) or <strong>MP4</strong> (video).
-  Paste a URL, pick a format, click a button, get the file. The downloading is always your own <code>yt-dlp</code> command,
-  isolated in a swappable <code>download.sh</code>. The UI is <strong>React + TypeScript</strong> (Vite), reused across the
-  local web app and the native app.</p>
+  <p class="lead">A small <strong>personal</strong> app to download a YouTube video as <strong>MP3</strong> (audio) or
+  <strong>MP4</strong> (video). Paste a URL, pick a format, click a button, get the file. The downloading is always your own
+  <code>yt-dlp</code> command, isolated in a swappable <code>download.sh</code>. The UI is <strong>React + TypeScript</strong> (Vite),
+  reused by both forms of the app.</p>
 
-  <p>Built in <strong>three phases</strong>:</p>
+  <p>Built in <strong>two phases</strong>:</p>
   <table>
-    <thead><tr><th>Phase</th><th>What</th><th>How</th></tr></thead>
+    <thead><tr><th>Phase</th><th>What</th><th>How</th><th>Status</th></tr></thead>
     <tbody>
-      <tr><td><strong>1</strong></td><td>Local, browser + server (current)</td><td>React UI in the browser → small TypeScript Node server runs <code>yt-dlp</code></td></tr>
-      <tr><td><strong>2</strong> <span class="new">NEW</span></td><td>macOS native app (Tauri)</td><td>the <strong>same React UI</strong> wrapped in a real <code>.app</code> → a Rust backend runs <code>yt-dlp</code>; <strong>no browser, no server</strong></td></tr>
-      <tr><td><strong>3</strong></td><td>IONOS VPS</td><td>the Phase-1 web app served at <code>https://&lt;domain&gt;</code> behind a password (CloudPanel)</td></tr>
+      <tr><td><strong>1</strong></td><td>Local web app</td><td>React UI in the browser → small TypeScript Node server runs <code>yt-dlp</code></td><td><span class="ok">✅ built</span></td></tr>
+      <tr><td><strong>2</strong></td><td>macOS native app (Tauri)</td><td>the <strong>same React UI</strong> wrapped in a real <code>.app</code> → a Rust backend runs <code>yt-dlp</code>; <strong>no browser, no server</strong></td><td><span class="ok">✅ built</span></td></tr>
     </tbody>
   </table>
-  <p>Phase 2 is the new middle step: instead of opening a browser against a local server, you get a double-clickable macOS app that does the same job natively.</p>
 
-  <blockquote><strong>Personal-use only.</strong> Download content you own, that is public-domain/Creative-Commons, or that you
-  have the right to save. A downloader exposed on the open internet <em>will</em> be abused — <strong>Phase 3 keeps it behind
-  authentication; do not run it open.</strong></blockquote>
+  <blockquote><strong>Out of scope: VPS / public hosting.</strong> An earlier draft had a third phase that deployed the web app to a
+  VPS behind a password. We <strong>decided against it</strong>: this is a single-user personal tool, and running <code>yt-dlp</code> from a
+  datacenter IP reliably trips YouTube's <em>"Sign in to confirm you're not a bot"</em> check. The local web app (Phase 1) and the native
+  app (Phase 2) — both running from a home IP — cover the need without the hosting overhead.</blockquote>
 
-  <p><strong>Single-user tool — just you.</strong> No accounts, no database. Phase 3's one Basic-Auth password is the whole login.
-  The app UI is in <strong>English</strong>. Docs: <code>PLAN.md</code> / <code>HOW-IT-WORKS.md</code> are the English source;
-  styled English renderings are <code>PLAN.html</code> / <code>HOW-IT-WORKS.html</code>; Korean renderings live in
-  <code>downloads/PLAN_KO.html</code> and <code>downloads/HOW-IT-WORKS_KO.html</code>.</p>
+  <blockquote><strong>Personal-use only.</strong> Download content you own, that is public-domain/Creative-Commons, or that you have the
+  right to save, and respect YouTube's Terms of Service.</blockquote>
+
+  <p><strong>Single-user — just you.</strong> No accounts, no server-side auth, no database. The app UI is in <strong>English</strong>.
+  Docs: <code>PLAN.md</code> / <code>HOW-IT-WORKS.md</code> are the English source; styled English renderings are <code>PLAN.html</code> /
+  <code>HOW-IT-WORKS.html</code>; Korean renderings live in <code>downloads/PLAN_KO.html</code> and <code>downloads/HOW-IT-WORKS_KO.html</code>.</p>
 
   <h2>1. Goal &amp; scope</h2>
   <p><strong>Goal:</strong> one screen → paste a YouTube URL → choose MP3 or MP4 → receive the file.</p>
   <ul>
     <li>Single video URL at a time (one job — serialized).</li>
     <li>Two formats, your exact commands (§5): MP4 ≤1440p merged, MP3 @ 64K.</li>
-    <li>A React + TypeScript UI, reused by Phase 1 (browser) and Phase 2 (Tauri native).</li>
-    <li>Phase 2 produces a real macOS <code>.app</code> with <strong>no browser and no separate server</strong>.</li>
+    <li>A React + TypeScript UI, reused by Phase 1 (browser) and Phase 2 (native).</li>
+    <li>Phase 2 produces a real macOS <code>.app</code> with no browser and no separate server.</li>
   </ul>
-  <p><strong>Out of scope (v1):</strong> playlists/batch, accounts, a database, re-encoding/trimming, concurrent jobs.</p>
+  <p><strong>Out of scope:</strong> VPS/public hosting (above), playlists/batch, accounts, a database, re-encoding/trimming, concurrent jobs.</p>
 
   <h2>2. Architecture</h2>
-<pre><code>Phase 1 (browser + server) and Phase 3 (VPS):
-  Browser (React SPA) ──POST /api/download──▶ Node server (server.ts) ──spawn──▶ download.sh ─▶ yt-dlp/ffmpeg
-       ▲ live log (streamed) ─────────────────────────┘                                           │
-       └── GET /api/file/&lt;id&gt; ◀──────────────────────────────────────────────────────────────────┘
+<pre><code>Phase 1 (local web app):
+  Browser (React SPA) ──POST /api/download──▶ Node server (server.ts, 127.0.0.1) ──spawn──▶ download.sh ─▶ yt-dlp/ffmpeg
+       ▲ live log (streamed) ─────────────────────────┘                                                     │
+       └── GET /api/file/&lt;id&gt; ◀────────────────────────────────────────────────────────────────────────────┘
 
-Phase 2 (Tauri native .app):
+Phase 2 (macOS native .app):
   React SPA (same code) ──invoke("download")──▶ Rust backend ──spawn──▶ download.sh ─▶ yt-dlp/ffmpeg
        ▲ live log (Tauri events) ──────────────────────┘                                  │
-       └── saved straight to a chosen folder ◀──────────────────────────────────────────┘</code></pre>
+       └── saved to ~/Downloads ◀────────────────────────────────────────────────────────┘</code></pre>
   <ul>
-    <li><strong>Phase 1 / 3:</strong> the browser talks to a local Node server over HTTP; the server runs <code>download.sh</code> and streams the log back.</li>
+    <li><strong>Phase 1:</strong> the browser talks to a local Node server over HTTP; the server runs <code>download.sh</code> and streams the log back.</li>
     <li><strong>Phase 2:</strong> the <strong>same React UI</strong> runs in a native window; instead of <code>fetch("/api/...")</code> it calls Tauri's <code>invoke()</code>, and a small <strong>Rust</strong> backend runs <code>download.sh</code> and streams the log via Tauri events. No HTTP server, no browser.</li>
-    <li>The UI never talks to YouTube — only the backend (via your script) does.</li>
+    <li>Either way the UI never talks to YouTube — only the backend (via your script) does. The frontend detects its host (<code>window.__TAURI_INTERNALS__</code>) and picks <code>invoke()</code> vs <code>fetch()</code>, so one UI codebase serves both phases.</li>
   </ul>
-  <p>The React frontend detects its host (<code>window.__TAURI__</code>) and picks <code>invoke()</code> vs <code>fetch()</code>, so one UI codebase serves all three phases.</p>
 
   <h2>3. Prerequisites</h2>
   <table>
-    <thead><tr><th>Tool</th><th>Why</th><th>Phases</th><th>Install (macOS)</th></tr></thead>
+    <thead><tr><th>Tool</th><th>Why</th><th>macOS</th></tr></thead>
     <tbody>
-      <tr><td><strong>yt-dlp</strong></td><td>the downloader</td><td>all</td><td><code>brew install yt-dlp</code></td></tr>
-      <tr><td><strong>ffmpeg</strong></td><td>MP3 extract + MP4 merge</td><td>all</td><td><code>brew install ffmpeg</code></td></tr>
-      <tr><td><strong>Node.js</strong> ≥ 18</td><td>build the React UI (+ P1/3 server)</td><td>all</td><td><code>brew install node</code></td></tr>
-      <tr><td><strong>Rust</strong> + <strong>Tauri CLI</strong></td><td>Phase 2 native backend/build</td><td>2</td><td>rustup + <code>npm i -D @tauri-apps/cli</code></td></tr>
+      <tr><td><strong>yt-dlp</strong></td><td>the downloader</td><td><code>brew install yt-dlp</code></td></tr>
+      <tr><td><strong>ffmpeg</strong></td><td>MP3 extract + MP4 merge</td><td><code>brew install ffmpeg</code></td></tr>
+      <tr><td><strong>Node.js</strong> ≥ 18</td><td>build the React UI (+ Phase 1 server)</td><td><code>brew install node</code></td></tr>
+      <tr><td><strong>Rust</strong></td><td>Phase 2 native build only</td><td><code>brew install rust</code></td></tr>
     </tbody>
   </table>
 
   <h2>4. File structure</h2>
 <pre><code>~/Sites/ytdown/
-├── index.html
+├── README.md              # quick start
+├── index.html             # Vite entry
 ├── src/                   # React + TS UI — SHARED by Phase 1 and Phase 2
 │   ├── main.tsx
 │   ├── App.tsx            # chooses invoke() (Tauri) vs fetch() (browser)
 │   ├── App.css · types.ts
-│   └── api.ts             # (Phase 2) the invoke/fetch adapter
-├── server/server.ts       # Phase 1 / 3 backend (TypeScript, tsx)
-├── src-tauri/             # Phase 2 — Rust native backend + Tauri config (§9)
-│   ├── src/main.rs        # the `download` command + log events
+│   └── api.ts             # the invoke/fetch adapter
+├── server/server.ts       # Phase 1 backend (TypeScript, tsx)
+├── src-tauri/             # Phase 2 — Rust native backend + Tauri config
+│   ├── src/lib.rs         # the `download` command + log events
 │   ├── tauri.conf.json · Cargo.toml
 ├── download.sh            # YOUR yt-dlp commands (§5)
 ├── vite.config.ts · tsconfig*.json · package.json
-├── dist/                  # Vite build (gitignored)
-└── downloads/             # output files + Korean *_KO.html docs (gitignored)</code></pre>
+├── dist/                  # Vite build output (gitignored)
+└── downloads/             # Phase-1 output + Korean *_KO.html docs (gitignored)</code></pre>
 
   <h2>5. The download script (<code>download.sh</code>) — your exact commands</h2>
   <p>The backend (Node or Rust) calls <code>bash download.sh "&lt;URL&gt;" "&lt;mp3|mp4&gt;" "&lt;OUTDIR&gt;"</code>:</p>
@@ -138,74 +139,57 @@ else
   yt-dlp -f "bestvideo[height&lt;=1440][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height&lt;=1440]+bestaudio" \
          --merge-output-format mp4 --no-mtime -o "$TEMPLATE" "$URL"
 fi</code></pre>
-  <p>Unchanged across all phases — both backends treat it as a black box (3 args in, a file out, exit 0).</p>
+  <p>The same for both phases — both backends treat it as a black box (3 args in, a file out, exit 0).</p>
 
   <h2>6. UI (<code>src/App.tsx</code>) — React + TypeScript, English, shared</h2>
   <p>One React component. State holds the URL, the <code>Format</code>, a <code>busy</code> flag, the streamed <code>log</code>, and a
-  result <code>status</code>. The <strong>same component</strong> runs in the browser (Phase 1/3) and inside the Tauri window
-  (Phase 2) — only the transport differs (<code>fetch</code> vs <code>invoke</code>), hidden behind <code>src/api.ts</code>.
-  (See <code>HOW-IT-WORKS.md</code> for the full walkthrough.)</p>
+  result <code>status</code>. The <strong>same component</strong> runs in the browser (Phase 1) and inside the Tauri window (Phase 2) —
+  only the transport differs (<code>fetch</code> vs <code>invoke</code>), hidden behind <code>src/api.ts</code>. (See <code>HOW-IT-WORKS.md</code>.)</p>
 
-  <h2>7. Phase-1/3 server (<code>server/server.ts</code>)</h2>
+  <h2>7. Phase-1 server (<code>server/server.ts</code>)</h2>
   <p>Plain <code>node:http</code>, bound to <code>127.0.0.1</code>. Routes: <code>POST /api/download</code> (validate → serialize →
   <code>spawn("bash", […])</code> → stream the live log → final <code>__FILE__</code>/<code>__ERROR__</code> sentinel),
   <code>GET /api/file/&lt;id&gt;</code> (stream the file, path-traversal guarded), and <code>GET &lt;else&gt;</code> (serve <code>dist/</code>).</p>
 
-  <h2>8. Phase 1 — local browser app (current)</h2>
+  <h2>8. Phase 1 — local web app</h2>
   <ol>
     <li><code>brew install yt-dlp ffmpeg node</code> → <code>npm install</code>.</li>
     <li><code>chmod +x download.sh</code>; test it alone → an <code>.mp3</code> appears.</li>
     <li><code>npm run dev</code> → <code>http://127.0.0.1:5173</code> → URL → MP3/MP4 → Download. <em>verify:</em> downloads + live log + HMR.</li>
-    <li><code>npm run build &amp;&amp; npm start</code> → built app serves both formats (the prod path Phase 3 uses).</li>
-  </ol>
-  <blockquote><strong>Phase 1 done</strong> = both formats download in the browser, dev and production build. <em>(Already built.)</em></blockquote>
-
-  <h2>9. Phase 2 — macOS native app (Tauri) <span class="new">🆕</span></h2>
-  <p><strong>Goal:</strong> a double-clickable <code>ytdown.app</code> that does the same job with no browser and no separate server, reusing the React UI.</p>
-  <ol>
-    <li><strong>Add Tauri:</strong> <code>npm i -D @tauri-apps/cli @tauri-apps/api</code>, then <code>npx tauri init</code> → creates <code>src-tauri/</code> (Rust). Point <code>tauri.conf.json</code> at the Vite dev server (dev) and <code>dist/</code> (build).</li>
-    <li><strong>Rust backend</strong> (<code>src-tauri/src/main.rs</code>): a <code>#[tauri::command] download(url, format)</code> that validates the URL (same youtube allowlist), serializes (one job), <code>Command::new("bash").args([script, url, format, outdir])</code>, and streams each stdout line to the frontend via <code>app.emit("download-log", line)</code>. Returns the produced filename (newest-file diff).</li>
-    <li><strong>Frontend adapter</strong> (<code>src/api.ts</code>): if <code>window.__TAURI__</code> → <code>invoke("download", …)</code> + <code>listen("download-log", …)</code>; else the existing <code>fetch</code> streaming path. <code>App.tsx</code> calls the adapter, otherwise unchanged.</li>
-    <li><strong>Output folder:</strong> the native app writes to a chosen folder (or <code>~/Downloads</code>) via Tauri's dialog/path APIs — no <code>/api/file</code> round-trip (the file is already local).</li>
-    <li><strong>Run / build:</strong> <code>npx tauri dev</code> (native window + HMR) → <em>verify</em> both formats. <code>npx tauri build</code> → <code>src-tauri/target/release/bundle/macos/ytdown.app</code> (+ <code>.dmg</code>).</li>
-  </ol>
-  <p><strong>Notes:</strong> yt-dlp/ffmpeg from the system <code>PATH</code> (keeps the app small) or bundled as Tauri "sidecars" later. For personal use, code-signing/notarization is optional (right-click-open works).</p>
-  <blockquote><strong>Phase 2 done</strong> = <code>ytdown.app</code> opens a native window and downloads MP3/MP4, no browser, no server.</blockquote>
-
-  <h2>10. Phase 3 — IONOS VPS (CloudPanel)</h2>
-  <p>Serve the Phase-1 web app at <code>https://&lt;domain&gt;</code> behind HTTPS + one Basic-Auth password.</p>
-  <p><strong>Server facts:</strong> IONOS VPS <code>&lt;VPS_IP&gt;</code>, Ubuntu 24.04, 2 vCore / 2GB / 80GB.
-  (<code>&lt;VPS_IP&gt;</code> and other deploy values are kept in <code>.env</code> — gitignored; copy <code>.env.example</code>.)</p>
-  <ol>
-    <li>DNS → subdomain <code>A</code> record → <code>&lt;VPS_IP&gt;</code>. IONOS firewall: allow 80 + 443 (+ 22).</li>
-    <li>Install <code>ffmpeg</code> (apt) + official <code>yt-dlp</code> binary; clone; <code>npm install &amp;&amp; npm run build</code>.</li>
-    <li>CloudPanel → Node site; PM2 (<code>pm2 start npm --name ytdown -- start</code>); <code>proxy_pass</code> → <code>127.0.0.1:5173</code>.</li>
-    <li>TLS via CloudPanel Let's Encrypt. <strong>🔒 Basic Auth:</strong> your single user/password. Smoke test both formats over HTTPS.</li>
+    <li><code>npm run build &amp;&amp; npm start</code> → built app serves both formats. → <span class="ok">✅ built.</span></li>
   </ol>
 
-  <h2>11. Security</h2>
+  <h2>9. Phase 2 — macOS native app (Tauri) <span class="ok">✅ built</span></h2>
+  <p>A double-clickable <code>ytdown.app</code> that does the same job with no browser and no server, reusing the React UI.</p>
   <ul>
-    <li><strong>Phase 3 auth:</strong> one Basic-Auth password at nginx; app binds <code>127.0.0.1</code> (only nginx is public).</li>
-    <li><strong>Injection guard:</strong> URL passed to the spawned process as an arg, never a shell string (Node and Rust backends both); host validated first.</li>
-    <li><strong>Serialize</strong> one job at a time; <strong>non-root</strong> app user on the VPS.</li>
+    <li><strong>Add Tauri:</strong> <code>npm i -D @tauri-apps/cli @tauri-apps/api</code>, <code>npx tauri init</code> → <code>src-tauri/</code> (Rust); <code>tauri.conf.json</code> points at the Vite dev server (dev) + <code>dist/</code> (build), and bundles <code>download.sh</code> as a resource.</li>
+    <li><strong>Rust backend</strong> (<code>src-tauri/src/lib.rs</code>): a <code>#[tauri::command] download(url, format)</code> that validates the URL, serializes one job, <code>Command::new("bash").args([script, url, format, outdir])</code>, streams each line via <code>app.emit("download-log", line)</code>, and returns the saved file path. It prepends the Homebrew bin dirs to <code>PATH</code> so a Finder-launched <code>.app</code> finds <code>yt-dlp</code>/<code>ffmpeg</code>.</li>
+    <li><strong>Frontend adapter</strong> (<code>src/api.ts</code>): <code>window.__TAURI_INTERNALS__</code> → <code>invoke("download", …)</code> + <code>listen("download-log", …)</code>; else the browser <code>fetch</code> path. The native app saves straight to <code>~/Downloads</code>.</li>
+    <li><strong>Build:</strong> <code>npx tauri dev</code> (native window + HMR), <code>npx tauri build</code> → <code>ytdown.app</code> (+ <code>.dmg</code>, ~8 MB).</li>
+    <li><strong>Distribution:</strong> unsigned (Gatekeeper bypass on first launch); the receiving Mac needs <code>yt-dlp</code>/<code>ffmpeg</code> (or bundle them as sidecars), and <code>tauri build --target universal-apple-darwin</code> for Intel + Apple Silicon (§12).</li>
   </ul>
 
-  <h2>12. Operational caveats</h2>
+  <h2>10. Security (local)</h2>
   <ul>
-    <li><strong>⚠️ YouTube blocks datacenter IPs.</strong> On the VPS (Phase 3), <code>yt-dlp</code> often hits <em>"Sign in to confirm you're not a bot."</em>
-    The <strong>native app (Phase 2)</strong> and local Phase 1 run from your home IP, so they avoid this — a real advantage of Phase 2. VPS mitigation: <code>--cookies cookies.txt</code>.</li>
+    <li><strong>Injection guard:</strong> the URL is passed to the spawned process as an argument, never a shell string (Node and Rust backends both); the host is validated against an allowlist first.</li>
+    <li><strong>Serialize:</strong> one job at a time.</li>
+    <li><strong>Phase 1 binds <code>127.0.0.1</code></strong> — the local server is never network-reachable.</li>
+  </ul>
+
+  <h2>11. Operational caveats</h2>
+  <ul>
     <li><strong>Keep yt-dlp fresh:</strong> <code>yt-dlp -U</code> / <code>brew upgrade yt-dlp</code>.</li>
-    <li><strong>Disk:</strong> VPS auto-cleanup matters; locally files accumulate in your chosen folder.</li>
+    <li><strong>Two copies, locally:</strong> the Phase-1 web app saves to <code>downloads/</code> <em>and</em> the browser saves its own copy; the native app saves once to <code>~/Downloads</code>.</li>
   </ul>
 
-  <h2>13. Possible later additions</h2>
+  <h2>12. Possible later additions</h2>
   <ul>
-    <li>Bundle yt-dlp/ffmpeg as Tauri sidecars for a fully self-contained <code>.app</code>.</li>
-    <li>Auto-cleanup / "delete after download" (local + VPS).</li>
-    <li>Playlist support; a quality picker; cookies-file support for the VPS bot-check.</li>
+    <li><strong>Bundle yt-dlp/ffmpeg as Tauri sidecars</strong> → a fully self-contained <code>.app</code> (no <code>brew</code> needed on another Mac).</li>
+    <li><strong>Universal build</strong> (<code>--target universal-apple-darwin</code>) so the <code>.app</code> runs on Intel + Apple Silicon.</li>
+    <li>Auto-cleanup / "delete after download"; playlist support; a quality picker.</li>
   </ul>
 
-  <div class="foot">ytdown — three-phase plan (browser · macOS native/Tauri · VPS) · React + TypeScript · personal use only.</div>
+  <div class="foot">ytdown — two-phase plan (local web app · macOS native/Tauri) · React + TypeScript · personal use only.</div>
 
 </div>
 </body>

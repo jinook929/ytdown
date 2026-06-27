@@ -51,10 +51,12 @@
   server</strong>. The server runs your <code>yt-dlp</code> command, streams the live log back to the browser, and hands you the
   finished file.</p>
 
-  <blockquote><strong>Where this fits in the 3-phase plan:</strong> this walkthrough describes <strong>Phase 1</strong> — the local
-  browser + server app, the part that exists today. <strong>Phase 2</strong> (a macOS native app via <strong>Tauri</strong>, reusing
-  this same React UI through a Rust backend) and <strong>Phase 3</strong> (the VPS deploy) are described in <code>PLAN.md</code>.
-  This document will gain a Phase-2 section once that app is built; for now it documents the working Phase-1 code.</blockquote>
+  <blockquote><strong>Where this fits:</strong> the project has <strong>two phases</strong>, both built — Phase 1 (this local web app)
+  and Phase 2 (a macOS native app via <strong>Tauri</strong>, reusing this same React UI through a Rust backend). This walkthrough
+  documents <strong>Phase 1</strong> in detail; the Phase-2 native backend lives in <code>src-tauri/src/lib.rs</code> and mirrors the
+  logic below (validate → run <code>download.sh</code> → stream the log → return the file), with the frontend choosing
+  <code>invoke()</code> vs <code>fetch()</code> via <code>src/api.ts</code>. A VPS/hosting phase was considered and <strong>dropped</strong>
+  (see <code>PLAN.md</code>).</blockquote>
 
   <h2>1. The big picture</h2>
 <pre><code>Browser (React SPA) ──POST /api/download {url,format}──▶  Node server (server.ts, 127.0.0.1)
@@ -128,14 +130,14 @@
     <li><strong>Dev</strong> (<code>npm run dev</code>): <code>concurrently</code> runs Vite on <code>5173</code> (React + hot-reload) and the API on
     <code>5174</code> (<code>tsx watch</code>); <code>vite.config.ts</code> proxies <code>/api/*</code> → 5174, so the browser just calls <code>fetch("/api/...")</code>.</li>
     <li><strong>Production</strong> (<code>npm run build</code> → <code>npm start</code>): typecheck + bundle to <code>dist/</code>, then <code>tsx server/server.ts</code>
-    serves <code>dist/</code> <strong>and</strong> <code>/api</code> on one port. This is what the VPS (PLAN §10) runs behind nginx.</li>
+    serves <code>dist/</code> <strong>and</strong> <code>/api</code> on one port.</li>
   </ul>
 
   <h2>7. Design decisions</h2>
   <ul>
     <li><strong>React + TypeScript, Vite-built.</strong> A typed, component-based UI with hot-reload — at the cost of a build step + <code>node_modules</code>.</li>
     <li><strong>One server for static + API in prod.</strong> Deployment is "one process behind nginx".</li>
-    <li><strong>Bind to <code>127.0.0.1</code>.</strong> The app is never the public face; on the VPS, nginx terminates TLS + enforces the password.</li>
+    <li><strong>Bind to <code>127.0.0.1</code>.</strong> The local server is never network-reachable — it only answers the browser on the same machine.</li>
     <li><strong>Streaming response as the log.</strong> The single POST response <em>is</em> the live log; its last line is the result — no WebSocket/polling.</li>
     <li><strong>Security by construction.</strong> Args-array spawn, host allowlist, <code>path.basename</code>, a 4 KB body cap, serialized jobs.</li>
   </ul>
@@ -147,7 +149,7 @@ npm run dev                  # → http://127.0.0.1:5173  (hot-reload)
 # or the production build:
 npm run build &amp;&amp; npm start    # → http://127.0.0.1:5173</code></pre>
   <p>Paste a link, pick MP3/MP4, hit Download. The log streams live; the file lands in <code>downloads/</code> and the browser download
-  starts automatically. For HTTPS + a password on a VPS, see <code>PLAN.md</code> §10 (Phase 3). For the upcoming native app, see §9 (Phase 2).</p>
+  starts automatically. For the macOS native app (Phase 2), see <code>PLAN.md</code> §9 and <code>src-tauri/src/lib.rs</code>.</p>
 
   <div class="foot">ytdown — React + TypeScript implementation walkthrough (Phase 1) · personal use only.</div>
 
