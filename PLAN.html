@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ytdown — 계획</title>
+<title>ytdown — Plan</title>
 <style>
   :root {
     --fg: #1a2826; --muted: #5b6b68; --bg: #f7f5f0; --card: #fff;
@@ -15,7 +15,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Malgun Gothic", sans-serif; }
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 96px; }
   h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 .25em; letter-spacing: -.02em; }
   h2 { font-size: 1.4rem; margin: 2.2em 0 .6em; padding-top: .6em; border-top: 1px solid var(--border); letter-spacing: -.01em; }
@@ -28,109 +28,104 @@
         overflow-x: auto; font-size: .8rem; line-height: 1.55; }
   pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
   blockquote { margin: 1.2em 0; padding: .8em 1.1em; background: var(--card);
-               border: 1px solid var(--border); border-left: 4px solid var(--accent); border-radius: 10px; color: var(--muted); }
-  blockquote.warn { border-left-color: var(--warn); }
+               border: 1px solid var(--border); border-left: 4px solid var(--warn); border-radius: 10px; color: var(--muted); }
   table { width: 100%; border-collapse: collapse; margin: 1.1em 0; font-size: .93rem; }
   th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; }
   th { color: var(--muted); font-weight: 600; font-size: .82rem; }
   ul, ol { padding-left: 1.3em; } li { margin: .3em 0; }
   .tag { display: inline-block; font-size: .72rem; letter-spacing: .04em;
          color: var(--accent); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; }
-  .warn-text { color: var(--warn); font-weight: 600; }
+  .new { color: var(--accent); font-weight: 700; }
   .foot { margin-top: 3em; padding-top: 1em; border-top: 1px solid var(--border); color: var(--muted); font-size: .85rem; }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <span class="tag">계획 (Plan)</span>
+  <span class="tag">Plan</span>
   <h1>ytdown</h1>
-  <p class="lead">유튜브 영상을 <strong>MP3</strong>(오디오) 또는 <strong>MP4</strong>(영상)로 다운로드하는 작은 앱입니다.
-  링크를 붙여넣고, 형식을 고르고, 버튼을 누르면 파일을 받습니다. UI는 <strong>React + TypeScript</strong>(Vite 빌드),
-  백엔드는 작은 <strong>TypeScript Node 서버</strong>입니다. 실제 다운로드는 교체 가능한 <code>download.sh</code>에 격리된
-  <strong>내 yt-dlp 명령</strong>이 담당합니다. <strong>두 단계</strong>로 만듭니다: <strong>(A)</strong> 로컬에서 만들고 테스트,
-  그다음 <strong>(B)</strong> <strong>IONOS VPS</strong>에 HTTPS + 비밀번호 뒤에서 배포.</p>
+  <p class="lead">A small app to download a YouTube video as <strong>MP3</strong> (audio) or <strong>MP4</strong> (video).
+  Paste a URL, pick a format, click a button, get the file. The downloading is always your own <code>yt-dlp</code> command,
+  isolated in a swappable <code>download.sh</code>. The UI is <strong>React + TypeScript</strong> (Vite), reused across the
+  local web app and the native app.</p>
 
-  <blockquote class="warn"><strong>개인 사용 전용 — 공개되면 더 중요합니다.</strong> 본인이 소유했거나, 퍼블릭 도메인/CC,
-  혹은 저장할 권리가 있는 콘텐츠만 다운로드하세요. 인터넷에 열어둔 유튜브 다운로더는 <em>반드시</em> 발견되어 악용됩니다.
-  <strong>그래서 Phase B는 인증 뒤에 둡니다 — 절대 열어두지 마세요.</strong></blockquote>
-
-  <p><strong>1인용 도구 — 나만 씁니다.</strong> 비밀번호 하나(HTTP Basic Auth)가 전체 로그인: 가입·계정·DB 없음.
-  앱 UI는 <strong>영어</strong>입니다. (<em>이 계획 문서</em>의 한국어 버전이 <code>PLAN.html</code>, 영어 원본이 <code>PLAN.md</code>.
-  구현 설명은 <code>HOW-IT-WORKS.md</code> 참고.)</p>
-
-  <h2>0. 두 단계</h2>
+  <p>Built in <strong>three phases</strong>:</p>
   <table>
-    <thead><tr><th>단계</th><th>위치</th><th>목표</th></tr></thead>
+    <thead><tr><th>Phase</th><th>What</th><th>How</th></tr></thead>
     <tbody>
-      <tr><td><strong>A</strong></td><td>내 Mac (<code>127.0.0.1</code>)</td><td>다운로드 흐름 완성: URL → MP3/MP4 파일</td></tr>
-      <tr><td><strong>B</strong></td><td>IONOS VPS (<code>&lt;VPS_IP&gt;</code>, Ubuntu 24.04)</td><td><code>https://&lt;도메인&gt;</code>에서 비밀번호로 보호하여 제공 (CloudPanel)</td></tr>
+      <tr><td><strong>1</strong></td><td>Local, browser + server (current)</td><td>React UI in the browser → small TypeScript Node server runs <code>yt-dlp</code></td></tr>
+      <tr><td><strong>2</strong> <span class="new">NEW</span></td><td>macOS native app (Tauri)</td><td>the <strong>same React UI</strong> wrapped in a real <code>.app</code> → a Rust backend runs <code>yt-dlp</code>; <strong>no browser, no server</strong></td></tr>
+      <tr><td><strong>3</strong></td><td>IONOS VPS</td><td>the Phase-1 web app served at <code>https://&lt;domain&gt;</code> behind a password (CloudPanel)</td></tr>
     </tbody>
   </table>
-  <p>A를 먼저. 같은 앱을 로컬에 바인딩할 뿐입니다. B는 대부분 운영 작업(빌드, 리버스 프록시, TLS, 인증, 프로세스 매니저).</p>
+  <p>Phase 2 is the new middle step: instead of opening a browser against a local server, you get a double-clickable macOS app that does the same job natively.</p>
 
-  <h2>1. 목표 &amp; 범위</h2>
-  <p><strong>목표:</strong> 한 화면 → 유튜브 URL 붙여넣기 → MP3/MP4 선택 → 브라우저에서 파일 받기.</p>
-  <p><strong>범위 (v1):</strong></p>
+  <blockquote><strong>Personal-use only.</strong> Download content you own, that is public-domain/Creative-Commons, or that you
+  have the right to save. A downloader exposed on the open internet <em>will</em> be abused — <strong>Phase 3 keeps it behind
+  authentication; do not run it open.</strong></blockquote>
+
+  <p><strong>Single-user tool — just you.</strong> No accounts, no database. Phase 3's one Basic-Auth password is the whole login.
+  The app UI is in <strong>English</strong>. Docs: <code>PLAN.md</code> / <code>HOW-IT-WORKS.md</code> are the English source;
+  styled English renderings are <code>PLAN.html</code> / <code>HOW-IT-WORKS.html</code>; Korean renderings live in
+  <code>downloads/PLAN_KO.html</code> and <code>downloads/HOW-IT-WORKS_KO.html</code>.</p>
+
+  <h2>1. Goal &amp; scope</h2>
+  <p><strong>Goal:</strong> one screen → paste a YouTube URL → choose MP3 or MP4 → receive the file.</p>
   <ul>
-    <li>한 번에 영상 1개 (<strong>동시에 1개 작업만</strong> — VPS RAM 2GB라 직렬화).</li>
-    <li>두 형식, <strong>내 명령 그대로</strong>(§5): MP4 ≤1440p 병합, MP3 @ 64K.</li>
-    <li><strong>React + TypeScript</strong> 단일 페이지 UI(영어) + 작은 TypeScript Node 서버.</li>
-    <li><strong>1인용(나만)</strong> — 비밀번호 하나(Basic Auth); 계정·가입·DB 없음.</li>
-    <li>VPS에서는 파일을 서버에서 생성 → 브라우저로 다운로드 스트리밍 → 자동 삭제.</li>
+    <li>Single video URL at a time (one job — serialized).</li>
+    <li>Two formats, your exact commands (§5): MP4 ≤1440p merged, MP3 @ 64K.</li>
+    <li>A React + TypeScript UI, reused by Phase 1 (browser) and Phase 2 (Tauri native).</li>
+    <li>Phase 2 produces a real macOS <code>.app</code> with <strong>no browser and no separate server</strong>.</li>
   </ul>
-  <p><strong>범위 밖 (v1):</strong> 재생목록/일괄, 계정, DB, 재인코딩/자르기, 동시 작업.</p>
+  <p><strong>Out of scope (v1):</strong> playlists/batch, accounts, a database, re-encoding/trimming, concurrent jobs.</p>
 
-  <h2>2. 구조</h2>
-<pre><code>브라우저 (React SPA) ──POST /api/download {url,format}──▶ Node 서버 (server.ts, 127.0.0.1)
-   ▲                                                         │ spawn (인자 배열, 셸 없음)
-   │  실시간 로그 (스트리밍)                                   ▼
-   │                                                    download.sh ──▶ yt-dlp + ffmpeg
-   │                                                         │            → ./downloads/&lt;제목&gt;.&lt;확장자&gt;
-   └──GET /api/file/&lt;id&gt; (첨부)◀───────────────────────────────┘  전송 후 삭제 / TTL
+  <h2>2. Architecture</h2>
+<pre><code>Phase 1 (browser + server) and Phase 3 (VPS):
+  Browser (React SPA) ──POST /api/download──▶ Node server (server.ts) ──spawn──▶ download.sh ─▶ yt-dlp/ffmpeg
+       ▲ live log (streamed) ─────────────────────────┘                                           │
+       └── GET /api/file/&lt;id&gt; ◀──────────────────────────────────────────────────────────────────┘
 
-  ── 개발: Vite(5173, HMR)가 /api 를 Node API(5174)로 프록시 ──
-  ── 운영 / Phase B ──
-인터넷 ──https──▶ CloudPanel nginx (TLS + Basic Auth) ──proxy_pass──▶ Node 서버 (127.0.0.1:5173, dist/ + /api)</code></pre>
+Phase 2 (Tauri native .app):
+  React SPA (same code) ──invoke("download")──▶ Rust backend ──spawn──▶ download.sh ─▶ yt-dlp/ffmpeg
+       ▲ live log (Tauri events) ──────────────────────┘                                  │
+       └── saved straight to a chosen folder ◀──────────────────────────────────────────┘</code></pre>
   <ul>
-    <li><strong>개발:</strong> Vite가 React 앱을 5173에서 핫리로드로 서빙하고 <code>/api/*</code>를 Node(5174)로 프록시.</li>
-    <li><strong>운영:</strong> Vite가 앱을 <code>dist/</code>로 빌드 → Node 서버가 <code>dist/</code> <strong>와</strong> <code>/api</code>를 한 포트에서 서빙.
-    항상 <code>127.0.0.1</code>에 바인딩 — VPS에서도 nginx(CloudPanel)가 공개 면(TLS + 비번).</li>
-    <li>브라우저는 유튜브와 직접 통신하지 않음 — 서버만(스크립트 경유).</li>
+    <li><strong>Phase 1 / 3:</strong> the browser talks to a local Node server over HTTP; the server runs <code>download.sh</code> and streams the log back.</li>
+    <li><strong>Phase 2:</strong> the <strong>same React UI</strong> runs in a native window; instead of <code>fetch("/api/...")</code> it calls Tauri's <code>invoke()</code>, and a small <strong>Rust</strong> backend runs <code>download.sh</code> and streams the log via Tauri events. No HTTP server, no browser.</li>
+    <li>The UI never talks to YouTube — only the backend (via your script) does.</li>
   </ul>
+  <p>The React frontend detects its host (<code>window.__TAURI__</code>) and picks <code>invoke()</code> vs <code>fetch()</code>, so one UI codebase serves all three phases.</p>
 
-  <h2>3. 사전 준비물</h2>
+  <h2>3. Prerequisites</h2>
   <table>
-    <thead><tr><th>도구</th><th>용도</th><th>macOS (로컬)</th><th>Ubuntu 24.04 (VPS)</th></tr></thead>
+    <thead><tr><th>Tool</th><th>Why</th><th>Phases</th><th>Install (macOS)</th></tr></thead>
     <tbody>
-      <tr><td><strong>yt-dlp</strong></td><td>다운로더</td><td><code>brew install yt-dlp</code></td><td>공식 바이너리 → <code>/usr/local/bin/yt-dlp</code> (§9)</td></tr>
-      <tr><td><strong>ffmpeg</strong></td><td>MP3 추출 + MP4 병합</td><td><code>brew install ffmpeg</code></td><td><code>sudo apt install -y ffmpeg</code></td></tr>
-      <tr><td><strong>Node.js</strong> ≥ 18</td><td>서버 + 빌드</td><td><code>brew install node</code></td><td>CloudPanel Node 사이트 / <code>apt</code></td></tr>
+      <tr><td><strong>yt-dlp</strong></td><td>the downloader</td><td>all</td><td><code>brew install yt-dlp</code></td></tr>
+      <tr><td><strong>ffmpeg</strong></td><td>MP3 extract + MP4 merge</td><td>all</td><td><code>brew install ffmpeg</code></td></tr>
+      <tr><td><strong>Node.js</strong> ≥ 18</td><td>build the React UI (+ P1/3 server)</td><td>all</td><td><code>brew install node</code></td></tr>
+      <tr><td><strong>Rust</strong> + <strong>Tauri CLI</strong></td><td>Phase 2 native backend/build</td><td>2</td><td>rustup + <code>npm i -D @tauri-apps/cli</code></td></tr>
     </tbody>
   </table>
-  <p>그리고 환경마다 <strong><code>npm install</code></strong> 1회(React, Vite, TypeScript, tsx) — 이제 빌드 단계가 있습니다.</p>
 
-  <h2>4. 파일 구조</h2>
+  <h2>4. File structure</h2>
 <pre><code>~/Sites/ytdown/
-├── index.html             # Vite 진입점 (빈 #root + 모듈 스크립트)
-├── src/
-│   ├── main.tsx           # &lt;App/&gt; 마운트
-│   ├── App.tsx            # UI: 상태 + 스트리밍 fetch
-│   ├── App.css            # 스타일
-│   └── types.ts           # Format = "mp3" | "mp4"
-├── server/
-│   └── server.ts          # API + dist/ 서빙 (TypeScript, tsx 실행)
-├── download.sh            # 내 yt-dlp 명령 (§5) — 유일하게 커스터마이즈
-├── vite.config.ts         # React 플러그인 + 개발 프록시 (/api → 5174)
-├── tsconfig.json          # 프런트엔드 TS
-├── tsconfig.server.json   # 백엔드 TS (타입체크)
-├── package.json           # 의존성 + 스크립트 (dev / build / start)
-├── dist/                  # Vite 빌드 산출물 (gitignore)
-└── downloads/             # 결과 파일 (gitignore)</code></pre>
+├── index.html
+├── src/                   # React + TS UI — SHARED by Phase 1 and Phase 2
+│   ├── main.tsx
+│   ├── App.tsx            # chooses invoke() (Tauri) vs fetch() (browser)
+│   ├── App.css · types.ts
+│   └── api.ts             # (Phase 2) the invoke/fetch adapter
+├── server/server.ts       # Phase 1 / 3 backend (TypeScript, tsx)
+├── src-tauri/             # Phase 2 — Rust native backend + Tauri config (§9)
+│   ├── src/main.rs        # the `download` command + log events
+│   ├── tauri.conf.json · Cargo.toml
+├── download.sh            # YOUR yt-dlp commands (§5)
+├── vite.config.ts · tsconfig*.json · package.json
+├── dist/                  # Vite build (gitignored)
+└── downloads/             # output files + Korean *_KO.html docs (gitignored)</code></pre>
 
-  <h2>5. 다운로드 스크립트 (<code>download.sh</code>) — 내 명령 그대로</h2>
-  <p>서버는 <code>bash download.sh "&lt;URL&gt;" "&lt;mp3|mp4&gt;" "&lt;OUTDIR&gt;"</code>로 호출. 내 두 명령을 그대로 넣고,
-  앱이 파일 위치를 알 수 있도록 <code>-o &lt;템플릿&gt;</code>과 <code>"$URL"</code>만 추가:</p>
+  <h2>5. The download script (<code>download.sh</code>) — your exact commands</h2>
+  <p>The backend (Node or Rust) calls <code>bash download.sh "&lt;URL&gt;" "&lt;mp3|mp4&gt;" "&lt;OUTDIR&gt;"</code>:</p>
 <pre><code>#!/usr/bin/env bash
 set -euo pipefail
 URL="$1"; FORMAT="$2"; OUTDIR="$3"
@@ -143,98 +138,74 @@ else
   yt-dlp -f "bestvideo[height&lt;=1440][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height&lt;=1440]+bestaudio" \
          --merge-output-format mp4 --no-mtime -o "$TEMPLATE" "$URL"
 fi</code></pre>
-  <p>기존과 동일 — 정확히 내 MP4(≤1440p, 병합)와 MP3(bestaudio → mp3 @ 64K), <code>--no-mtime</code> 그대로.</p>
+  <p>Unchanged across all phases — both backends treat it as a black box (3 args in, a file out, exit 0).</p>
 
-  <h2>6. UI (<code>src/App.tsx</code>) — React + TypeScript, 영어</h2>
-  <p>라우터 없는 React 컴포넌트 하나. 상태(<code>useState</code>)가 URL, 선택한 <code>Format</code>, <code>busy</code> 플래그,
-  스트리밍 <code>log</code>, 결과 <code>status</code>를 담습니다. 제출 시 <code>{ url, format }</code>를 POST하고,
-  스트리밍 응답 본문을 조각씩(<code>getReader()</code> + <code>TextDecoder</code>) 로그에 누적하며, 마지막
-  <code>__FILE__</code> / <code>__ERROR__</code> 표식 줄을 파싱해 결과를 보여주고 다운로드를 자동 시작합니다.
-  영어 UI: URL 입력("Paste a YouTube link"), MP3/MP4 라디오(기본 MP4), Download 버튼(작업 중 "Downloading…"),
-  실시간 <code>&lt;pre&gt;</code> 로그. (자세한 흐름은 <code>HOW-IT-WORKS.md</code> §3.)</p>
+  <h2>6. UI (<code>src/App.tsx</code>) — React + TypeScript, English, shared</h2>
+  <p>One React component. State holds the URL, the <code>Format</code>, a <code>busy</code> flag, the streamed <code>log</code>, and a
+  result <code>status</code>. The <strong>same component</strong> runs in the browser (Phase 1/3) and inside the Tauri window
+  (Phase 2) — only the transport differs (<code>fetch</code> vs <code>invoke</code>), hidden behind <code>src/api.ts</code>.
+  (See <code>HOW-IT-WORKS.md</code> for the full walkthrough.)</p>
 
-  <h2>7. 서버 (<code>server/server.ts</code>) 책임</h2>
+  <h2>7. Phase-1/3 server (<code>server/server.ts</code>)</h2>
+  <p>Plain <code>node:http</code>, bound to <code>127.0.0.1</code>. Routes: <code>POST /api/download</code> (validate → serialize →
+  <code>spawn("bash", […])</code> → stream the live log → final <code>__FILE__</code>/<code>__ERROR__</code> sentinel),
+  <code>GET /api/file/&lt;id&gt;</code> (stream the file, path-traversal guarded), and <code>GET &lt;else&gt;</code> (serve <code>dist/</code>).</p>
+
+  <h2>8. Phase 1 — local browser app (current)</h2>
   <ol>
-    <li><code>GET &lt;/api 아님&gt;</code> → <code>serveFrontend</code>: <code>dist/</code>의 빌드된 SPA 서빙(없는 경로는 <code>index.html</code> 폴백, 경로 탈출 방지). 개발에선 거의 안 거침(Vite가 UI 담당).</li>
-    <li><code>POST /api/download</code> <code>{ url, format }</code>:
-      <ul>
-        <li><strong>검증</strong>: <code>url</code>은 호스트 <code>youtube.com</code>/<code>youtu.be</code>의 <code>https://</code>; <code>format</code> ∈ {<code>mp3</code>,<code>mp4</code>}. 아니면 <code>400</code>.</li>
-        <li><strong>직렬화</strong>: 이미 작업 중이면 <code>429</code> (2GB RAM → 한 번에 1개).</li>
-        <li><code>spawn("bash", [SCRIPT, url, format, outdir])</code> — <strong>인자 배열, 셸 문자열 아님</strong>(인젝션 방지).</li>
-        <li>stdout/stderr를 브라우저로 스트리밍(실시간 로그); 종료 0이면 <code>__FILE__ &lt;name&gt;</code> 표식으로 마무리.</li>
-      </ul>
-    </li>
-    <li><code>GET /api/file/&lt;id&gt;</code> → <code>Content-Disposition: attachment</code>(UTF-8 파일명)로 파일 스트리밍, (VPS에선) 전송 후 삭제 / TTL.</li>
-    <li><strong>항상 <code>127.0.0.1</code> 바인딩</strong> (두 단계 모두).</li>
+    <li><code>brew install yt-dlp ffmpeg node</code> → <code>npm install</code>.</li>
+    <li><code>chmod +x download.sh</code>; test it alone → an <code>.mp3</code> appears.</li>
+    <li><code>npm run dev</code> → <code>http://127.0.0.1:5173</code> → URL → MP3/MP4 → Download. <em>verify:</em> downloads + live log + HMR.</li>
+    <li><code>npm run build &amp;&amp; npm start</code> → built app serves both formats (the prod path Phase 3 uses).</li>
+  </ol>
+  <blockquote><strong>Phase 1 done</strong> = both formats download in the browser, dev and production build. <em>(Already built.)</em></blockquote>
+
+  <h2>9. Phase 2 — macOS native app (Tauri) <span class="new">🆕</span></h2>
+  <p><strong>Goal:</strong> a double-clickable <code>ytdown.app</code> that does the same job with no browser and no separate server, reusing the React UI.</p>
+  <ol>
+    <li><strong>Add Tauri:</strong> <code>npm i -D @tauri-apps/cli @tauri-apps/api</code>, then <code>npx tauri init</code> → creates <code>src-tauri/</code> (Rust). Point <code>tauri.conf.json</code> at the Vite dev server (dev) and <code>dist/</code> (build).</li>
+    <li><strong>Rust backend</strong> (<code>src-tauri/src/main.rs</code>): a <code>#[tauri::command] download(url, format)</code> that validates the URL (same youtube allowlist), serializes (one job), <code>Command::new("bash").args([script, url, format, outdir])</code>, and streams each stdout line to the frontend via <code>app.emit("download-log", line)</code>. Returns the produced filename (newest-file diff).</li>
+    <li><strong>Frontend adapter</strong> (<code>src/api.ts</code>): if <code>window.__TAURI__</code> → <code>invoke("download", …)</code> + <code>listen("download-log", …)</code>; else the existing <code>fetch</code> streaming path. <code>App.tsx</code> calls the adapter, otherwise unchanged.</li>
+    <li><strong>Output folder:</strong> the native app writes to a chosen folder (or <code>~/Downloads</code>) via Tauri's dialog/path APIs — no <code>/api/file</code> round-trip (the file is already local).</li>
+    <li><strong>Run / build:</strong> <code>npx tauri dev</code> (native window + HMR) → <em>verify</em> both formats. <code>npx tauri build</code> → <code>src-tauri/target/release/bundle/macos/ytdown.app</code> (+ <code>.dmg</code>).</li>
+  </ol>
+  <p><strong>Notes:</strong> yt-dlp/ffmpeg from the system <code>PATH</code> (keeps the app small) or bundled as Tauri "sidecars" later. For personal use, code-signing/notarization is optional (right-click-open works).</p>
+  <blockquote><strong>Phase 2 done</strong> = <code>ytdown.app</code> opens a native window and downloads MP3/MP4, no browser, no server.</blockquote>
+
+  <h2>10. Phase 3 — IONOS VPS (CloudPanel)</h2>
+  <p>Serve the Phase-1 web app at <code>https://&lt;domain&gt;</code> behind HTTPS + one Basic-Auth password.</p>
+  <p><strong>Server facts:</strong> IONOS VPS <code>&lt;VPS_IP&gt;</code>, Ubuntu 24.04, 2 vCore / 2GB / 80GB.
+  (<code>&lt;VPS_IP&gt;</code> and other deploy values are kept in <code>.env</code> — gitignored; copy <code>.env.example</code>.)</p>
+  <ol>
+    <li>DNS → subdomain <code>A</code> record → <code>&lt;VPS_IP&gt;</code>. IONOS firewall: allow 80 + 443 (+ 22).</li>
+    <li>Install <code>ffmpeg</code> (apt) + official <code>yt-dlp</code> binary; clone; <code>npm install &amp;&amp; npm run build</code>.</li>
+    <li>CloudPanel → Node site; PM2 (<code>pm2 start npm --name ytdown -- start</code>); <code>proxy_pass</code> → <code>127.0.0.1:5173</code>.</li>
+    <li>TLS via CloudPanel Let's Encrypt. <strong>🔒 Basic Auth:</strong> your single user/password. Smoke test both formats over HTTPS.</li>
   </ol>
 
-  <h2>8. Phase A — 로컬에서 만들고 테스트</h2>
-  <ol>
-    <li><code>brew install yt-dlp ffmpeg node</code> → 버전 확인.</li>
-    <li><code>npm install</code> (React, Vite, TypeScript, tsx). <em>확인:</em> <code>node_modules/</code> 생성, 에러 없음.</li>
-    <li><code>chmod +x download.sh</code> → 단독 테스트: <code>mkdir -p downloads &amp;&amp; ./download.sh "https://youtu.be/XXXX" mp3 "$PWD/downloads"</code>. <em>확인:</em> <code>.mp3</code> 생성.</li>
-    <li><code>npm run dev</code> → <code>http://127.0.0.1:5173</code> → URL → MP3 → Download. <em>확인:</em> 파일 받아짐, 로그 실시간, 핫리로드 동작.</li>
-    <li>MP4로 반복. <em>확인:</em> 병합된 ≤1440p <code>.mp4</code> 재생.</li>
-    <li><code>npm run build &amp;&amp; npm start</code> → <code>http://127.0.0.1:5173</code>. <em>확인:</em> 빌드된 앱이 서빙되고 두 형식 모두 동작(VPS가 쓰는 운영 경로).</li>
-  </ol>
-  <blockquote><strong>Phase A 완료</strong> = 개발 <em>과</em> 운영 빌드 양쪽에서 두 형식 다운로드됨.</blockquote>
-
-  <h2>9. Phase B — IONOS VPS 배포 (CloudPanel)</h2>
-  <p><strong>서버 정보:</strong> IONOS VPS <code>&lt;VPS_IP&gt;</code>, Ubuntu 24.04, 2 vCore / 2GB RAM / 80GB NVMe, 앞단에 IONOS 방화벽 정책.
-  (<code>&lt;VPS_IP&gt;</code> 등 배포 값은 <code>.env</code>에 보관 — gitignore됨; <code>.env.example</code>을 <code>.env</code>로 복사해 채우세요.)</p>
-  <ol>
-    <li><strong>DNS:</strong> 서브도메인 <code>A</code> 레코드 → <code>&lt;VPS_IP&gt;</code>.</li>
-    <li><strong>IONOS 방화벽:</strong> 인바운드 <strong>80 + 443</strong>(및 SSH 22) 허용. CloudPanel 자체는 8443.</li>
-    <li><strong>런타임 설치</strong>(root 아닌 sudo 사용자):
-<pre><code>sudo apt update &amp;&amp; sudo apt install -y ffmpeg
-sudo curl -L https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp
-sudo chmod a+rx /usr/local/bin/yt-dlp
-yt-dlp --version &amp;&amp; ffmpeg -version</code></pre>
-      (apt 말고 공식 <code>yt-dlp</code> 바이너리. 이후 <code>sudo yt-dlp -U</code>.)</li>
-    <li><strong>CloudPanel → Add Site → Node.js</strong>(또는 Reverse Proxy): 도메인 지정; nginx vhost + 앱 사용자 + 홈 디렉터리 생성.</li>
-    <li><strong>코드 배포</strong>(<code>git clone</code> 또는 <code>scp</code>) 후 서버에서 <strong><code>npm install</code> + <code>npm run build</code></strong>(→ <code>dist/</code> 생성). <code>chmod +x download.sh</code>, <code>mkdir -p downloads</code>.</li>
-    <li><strong>서비스로 실행</strong> — PM2:
-<pre><code>sudo npm i -g pm2
-pm2 start npm --name ytdown -- start    # npm start → tsx server/server.ts (127.0.0.1:5173)
-pm2 save &amp;&amp; pm2 startup                # 부팅 시 자동 시작</code></pre></li>
-    <li><strong>리버스 프록시:</strong> CloudPanel vhost에서 <code>http://127.0.0.1:5173</code>로 <code>proxy_pass</code>.</li>
-    <li><strong>TLS:</strong> CloudPanel → 사이트 → <strong>SSL/TLS → Let's Encrypt</strong> → 발급 + HTTPS 강제.</li>
-    <li><strong class="warn-text">🔒 잠그기 (생략 금지):</strong> CloudPanel → 사이트 → <strong>Basic Auth</strong> → 사용자명 + 비밀번호.
-    <strong>1인용이라 그 비밀번호 하나가 전체 로그인</strong> — 계정·DB 불필요. (선택: 내 IP만 허용 allowlist.)</li>
-    <li><strong>스모크 테스트:</strong> URL 열기 → Basic Auth 입력 → MP3·MP4 다운로드. <em>확인:</em> HTTPS로 동작; <code>pm2 logs ytdown</code> 깨끗.</li>
-  </ol>
-  <blockquote><strong>Phase B 완료</strong> = <code>https://ytdown.yourdomain.com</code>, 비밀번호 프롬프트, 두 형식 다운로드.</blockquote>
-
-  <h2>10. 보안 (공개 호스팅 — 타협 불가)</h2>
+  <h2>11. Security</h2>
   <ul>
-    <li><strong>앞단 인증:</strong> nginx Basic Auth 하나(9단계) — 1인용이라 그게 전체 로그인. 절대 열어두지 말 것.</li>
-    <li><strong>앱은 <code>127.0.0.1</code> 바인딩:</strong> 공개는 nginx만; Node 포트는 인터넷에서 닿지 않음.</li>
-    <li><strong>인젝션 방지:</strong> URL을 <code>spawn</code> 인자로; 셸 문자열 연결 금지; spawn 전 호스트 검증.</li>
-    <li><strong>레이트 리밋 + 직렬화:</strong> 한 번에 1개(§7); 선택적 nginx <code>limit_req</code>.</li>
-    <li><strong>비-root 사용자</strong>로 실행.</li>
-    <li><strong>디스크 위생:</strong> 정리 스윕 + 다운로드별 삭제로 80GB 안 채우기.</li>
+    <li><strong>Phase 3 auth:</strong> one Basic-Auth password at nginx; app binds <code>127.0.0.1</code> (only nginx is public).</li>
+    <li><strong>Injection guard:</strong> URL passed to the spawned process as an arg, never a shell string (Node and Rust backends both); host validated first.</li>
+    <li><strong>Serialize</strong> one job at a time; <strong>non-root</strong> app user on the VPS.</li>
   </ul>
 
-  <h2>11. 운영 주의사항 (실제로 발목 잡는 것들)</h2>
+  <h2>12. Operational caveats</h2>
   <ul>
-    <li><span class="warn-text">⚠️ 유튜브는 데이터센터 IP를 차단.</span> VPS IP에서 <code>yt-dlp</code>는 같은 명령이 Mac에선 돼도 종종
-    <em>"Sign in to confirm you're not a bot"</em>으로 실패. 완화책: <code>--cookies /경로/cookies.txt</code>, 속도 조절, 간헐적 불안정 감안. VPS 버전은 로컬보다 불안정할 수 있음.</li>
-    <li><strong>2GB RAM:</strong> 직렬 1개엔 충분; 동시 작업 금지(§7).</li>
-    <li><strong>80GB 디스크:</strong> 자동 정리 중요.</li>
-    <li><strong>yt-dlp 최신 유지:</strong> <code>sudo yt-dlp -U</code>(또는 주간 cron).</li>
-    <li><strong>업데이트/재시작:</strong> <code>git pull &amp;&amp; npm install &amp;&amp; npm run build &amp;&amp; pm2 restart ytdown</code>.</li>
+    <li><strong>⚠️ YouTube blocks datacenter IPs.</strong> On the VPS (Phase 3), <code>yt-dlp</code> often hits <em>"Sign in to confirm you're not a bot."</em>
+    The <strong>native app (Phase 2)</strong> and local Phase 1 run from your home IP, so they avoid this — a real advantage of Phase 2. VPS mitigation: <code>--cookies cookies.txt</code>.</li>
+    <li><strong>Keep yt-dlp fresh:</strong> <code>yt-dlp -U</code> / <code>brew upgrade yt-dlp</code>.</li>
+    <li><strong>Disk:</strong> VPS auto-cleanup matters; locally files accumulate in your chosen folder.</li>
   </ul>
 
-  <h2>12. 추후 추가 가능 (정말 필요할 때만)</h2>
+  <h2>13. Possible later additions</h2>
   <ul>
-    <li>UI에서 cookies 파일 업로드(봇 차단 회피용).</li>
-    <li>재생목록 지원; 화질 선택(1080p/720p/1440p).</li>
-    <li>MP3에 썸네일 + 메타데이터 임베드(<code>--embed-thumbnail --embed-metadata</code>).</li>
-    <li>간단한 작업 내역 / "최근 다운로드" 목록.</li>
+    <li>Bundle yt-dlp/ffmpeg as Tauri sidecars for a fully self-contained <code>.app</code>.</li>
+    <li>Auto-cleanup / "delete after download" (local + VPS).</li>
+    <li>Playlist support; a quality picker; cookies-file support for the VPS bot-check.</li>
   </ul>
-  <p>각각 독립적인 추가 기능 — 먼저 Phase A, 그다음 Phase B를 끝까지 동작시킨 뒤에.</p>
 
-  <div class="foot">ytdown — 로컬 + IONOS VPS 유튜브 → MP3/MP4 유틸리티 · React + TypeScript · 개인 사용 전용, 인증 뒤에서.</div>
+  <div class="foot">ytdown — three-phase plan (browser · macOS native/Tauri · VPS) · React + TypeScript · personal use only.</div>
 
 </div>
 </body>

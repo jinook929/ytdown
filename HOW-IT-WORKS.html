@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ko">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>ytdown — 이 앱은 어떻게 만들어졌나</title>
+<title>ytdown — How This App Is Built</title>
 <style>
   :root {
     --fg: #1a2826; --muted: #5b6b68; --bg: #f7f5f0; --card: #fff;
@@ -15,7 +15,7 @@
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--bg); color: var(--fg);
-    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Segoe UI", Roboto, "Malgun Gothic", sans-serif; }
+    font: 16px/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   .wrap { max-width: 860px; margin: 0 auto; padding: 48px 24px 96px; }
   h1 { font-size: 2.1rem; line-height: 1.15; margin: 0 0 .25em; letter-spacing: -.02em; }
   h2 { font-size: 1.4rem; margin: 2.2em 0 .6em; padding-top: .6em; border-top: 1px solid var(--border); letter-spacing: -.01em; }
@@ -42,190 +42,114 @@
 <body>
 <div class="wrap">
 
-  <span class="tag">구현 설명 (How it works)</span>
-  <h1>ytdown — 이 앱은 어떻게 만들어졌나</h1>
-  <p class="lead"><strong>ytdown</strong>이 실제로 어떻게 구현됐는지(현재 코드 기준) 따라가는 문서입니다.
-  <code>PLAN.md</code>가 <em>무엇을 만들고 어떻게 배포하는지</em>를 다룬다면, 이 문서는 <em>동작하는 앱이 어떻게
-  맞물려 돌아가는지</em> — 요청 흐름, 각 파일의 역할, 설계 결정 — 를 설명합니다.</p>
-  <p>앱은 <strong>React + TypeScript</strong> 단일 페이지 UI(Vite로 빌드)와 작은 <strong>TypeScript Node 서버</strong>로
-  이루어집니다. 서버는 <code>yt-dlp</code> 명령을 실행하고, 진행 로그를 브라우저로 실시간 스트리밍하며, 완성된 파일을 내려줍니다.
-  다운로드 규약 자체는 기존 vanilla 버전과 동일하고, UI와 서버의 언어/빌드만 바뀌었습니다.</p>
+  <span class="tag">How it works</span>
+  <h1>ytdown — How This App Is Built</h1>
+  <p class="lead">A walkthrough of how <strong>ytdown</strong> is actually implemented, based on the code as it stands. Where
+  <code>PLAN.md</code> describes <em>what to build and how to deploy it</em>, this document explains <em>how the working app fits
+  together</em> — the request flow, each file's job, and the design decisions behind them.</p>
+  <p>The app is a <strong>React + TypeScript</strong> single-page UI (built with Vite) talking to a small <strong>TypeScript Node
+  server</strong>. The server runs your <code>yt-dlp</code> command, streams the live log back to the browser, and hands you the
+  finished file.</p>
 
-  <h2>1. 큰 그림</h2>
-<pre><code>브라우저 (React SPA) ──POST /api/download {url,format}──▶ Node 서버 (server.ts, 127.0.0.1)
+  <blockquote><strong>Where this fits in the 3-phase plan:</strong> this walkthrough describes <strong>Phase 1</strong> — the local
+  browser + server app, the part that exists today. <strong>Phase 2</strong> (a macOS native app via <strong>Tauri</strong>, reusing
+  this same React UI through a Rust backend) and <strong>Phase 3</strong> (the VPS deploy) are described in <code>PLAN.md</code>.
+  This document will gain a Phase-2 section once that app is built; for now it documents the working Phase-1 code.</blockquote>
+
+  <h2>1. The big picture</h2>
+<pre><code>Browser (React SPA) ──POST /api/download {url,format}──▶  Node server (server.ts, 127.0.0.1)
    ▲                                                          │ spawn("bash", [download.sh, …])
-   │  실시간 로그 (스트리밍 응답 본문)                          ▼
+   │  live log (streamed response body)                       ▼
    │                                                      download.sh ──▶ yt-dlp + ffmpeg
-   │                                                          │            → downloads/&lt;제목&gt;.&lt;확장자&gt;
-   └──GET /api/file/&lt;name&gt; (첨부)◀──────────────────────────────┘  마지막 줄 "__FILE__ &lt;name&gt;" = 결과</code></pre>
-  <p>요청 하나가 전체 작업을 처리합니다. 서버는 <code>yt-dlp</code>의 출력을 실행되는 즉시 HTTP 응답으로 흘려보내고,
-  그 스트림의 <strong>마지막 줄</strong>이 표식(sentinel)입니다 — 성공이면 <code>__FILE__ &lt;name&gt;</code>, 실패면
-  <code>__ERROR__ &lt;message&gt;</code>. 브라우저는 스트림을 실시간으로 읽다가, 마지막 줄을 파싱해 결과를 판단합니다.</p>
-  <p>브라우저는 유튜브와 직접 통신하지 않습니다 — 오직 서버만(스크립트를 통해) 통신합니다.</p>
-  <p><strong>개발 vs 운영</strong>이 새로 생긴 한 가지 차이입니다(§6 참고): 개발에서는 Vite가 React 앱을 핫리로드로
-  서빙하면서 <code>/api/*</code>를 Node 서버로 <em>프록시</em>하고, 운영에서는 Vite가 앱을 <code>dist/</code>로 빌드하면
-  같은 Node 서버가 그 정적 파일 <strong>과</strong> API를 함께 서빙합니다.</p>
+   │                                                          │            → downloads/&lt;title&gt;.&lt;ext&gt;
+   └──GET /api/file/&lt;name&gt; (attachment)◀──────────────────────┘  final "__FILE__ &lt;name&gt;" line = result</code></pre>
+  <p>One request does the whole job. The server streams <code>yt-dlp</code>'s output straight into the HTTP response as it runs, and
+  the <strong>last line</strong> of that stream is a sentinel — <code>__FILE__ &lt;name&gt;</code> (success) or
+  <code>__ERROR__ &lt;message&gt;</code> (failure). The browser reads the stream live, then parses that final line. The browser never
+  talks to YouTube; only the server does (through your script).</p>
+  <p><strong>Dev vs production</strong> is the one wrinkle (§6): in dev, Vite serves the React app with hot-reload and <em>proxies</em>
+  <code>/api/*</code> to the Node server; in production, Vite builds to <code>dist/</code> and the same Node server serves those static
+  files <strong>and</strong> the API.</p>
 
-  <h2>2. 파일 구조</h2>
+  <h2>2. File structure</h2>
 <pre><code>ytdown/
-├── index.html             # Vite 진입점: 빈 &lt;div id="root"&gt; + 모듈 스크립트
+├── index.html             # Vite entry: empty &lt;div id="root"&gt; + module script
 ├── src/
-│   ├── main.tsx           # &lt;App/&gt; 을 #root 에 마운트
-│   ├── App.tsx            # UI 전체: 상태, 폼, 스트리밍 fetch
-│   ├── App.css            # 스타일(라이트/다크)
-│   └── types.ts           # 공유 타입 (Format = "mp3" | "mp4")
-├── server/
-│   └── server.ts          # 백엔드: 라우팅, 검증, spawn, 스트리밍, 정적/파일 서빙
-├── download.sh            # 내 yt-dlp 명령 — 유일하게 커스터마이즈하는 파일
-├── vite.config.ts         # React 플러그인 + 개발 프록시 (/api → 127.0.0.1:5174)
-├── tsconfig.json          # 프런트엔드 TS 설정
-├── tsconfig.server.json   # 백엔드 TS 설정 (타입체크용; 실행은 tsx)
-├── package.json           # 의존성 + 스크립트 (dev / build / start)
-├── dist/                  # Vite 빌드 산출물 (gitignore)
-└── downloads/             # 결과 파일 (gitignore)</code></pre>
-  <p>이제 빌드 단계와 <code>node_modules</code>(React, Vite, TypeScript)가 생겼습니다. 그 비용의 대가로:
-  타입이 있는 컴포넌트 기반 UI와 개발 중 핫리로드를 얻습니다.</p>
+│   ├── main.tsx           # mounts &lt;App/&gt; into #root
+│   ├── App.tsx            # the whole UI: state, the form, the streaming fetch
+│   ├── App.css · types.ts
+├── server/server.ts       # backend: routing, validation, spawn, streaming, static + file serving
+├── download.sh            # YOUR yt-dlp commands — the only file you customize
+├── vite.config.ts · tsconfig.json · tsconfig.server.json · package.json
+├── dist/                  # Vite build output (gitignored)
+└── downloads/             # output files land here (gitignored)</code></pre>
 
-  <h2>3. 프런트엔드 (React + TypeScript)</h2>
+  <h2>3. The frontend (React + TypeScript)</h2>
+  <h3>3.1 Entry: <code>index.html</code> → <code>main.tsx</code></h3>
+  <p><code>index.html</code> is almost empty — just <code>&lt;div id="root"&gt;&lt;/div&gt;</code> and the module script. <code>main.tsx</code>
+  finds that div and mounts the app with <code>createRoot(...).render(&lt;StrictMode&gt;&lt;App /&gt;&lt;/StrictMode&gt;)</code>. The <code>!</code>
+  is a non-null assertion (the root div always exists); <code>StrictMode</code> only affects development.</p>
+  <h3>3.2 State: <code>App.tsx</code></h3>
+  <p>The UI is one component. Everything that can change on screen is React <strong>state</strong> (<code>useState</code>) — because
+  setting state is what tells React to re-render: <code>url</code>, <code>format</code> (typed <code>"mp3" | "mp4"</code>),
+  <code>busy</code>, <code>log</code>, and a <code>status</code> object.</p>
+  <h3>3.3 The submit handler</h3>
+  <p><code>handleSubmit</code> is <code>async</code> (it awaits the network stream): <code>preventDefault</code> → reset state →
+  <code>fetch("/api/download")</code> → if not <code>ok</code>, throw the body text → read the streamed body incrementally with
+  <code>getReader()</code> + <code>TextDecoder</code> in a <code>for (;;)</code> loop, appending to <code>log</code> → match the
+  accumulated text against the <code>__FILE__</code> / <code>__ERROR__</code> sentinels → <code>finally</code> re-enables the button.
+  JSX renders conditionally (<code>{status &amp;&amp; …}</code>, <code>{log &amp;&amp; &lt;pre&gt;…}</code>).</p>
 
-  <h3>3.1 진입점: <code>index.html</code> → <code>main.tsx</code></h3>
-  <p><code>index.html</code>은 거의 비어 있습니다 — <code>&lt;div id="root"&gt;&lt;/div&gt;</code>와
-  <code>&lt;script type="module" src="/src/main.tsx"&gt;</code>뿐. <code>main.tsx</code>가 그 div를 찾아 앱을 마운트합니다:</p>
-<pre><code>createRoot(document.getElementById("root")!).render(
-  &lt;StrictMode&gt;&lt;App /&gt;&lt;/StrictMode&gt;,
-);</code></pre>
-  <p><code>!</code>는 TypeScript의 non-null 단언(root div는 항상 존재). <code>StrictMode</code>는 개발에서만
-  동작하며 일부 로직을 두 번 실행해 버그를 드러냅니다.</p>
-
-  <h3>3.2 상태: <code>App.tsx</code></h3>
-  <p>UI는 컴포넌트 하나. 화면에서 바뀔 수 있는 모든 값은 React <strong>상태</strong>(<code>useState</code>)입니다 —
-  상태를 set 해야 React가 다시 그리기 때문입니다. 일반 변수는 바뀌어도 화면이 갱신되지 않습니다.</p>
+  <h2>4. The server (<code>server/server.ts</code>)</h2>
+  <p>Plain <code>node:http</code> in TypeScript (run by <code>tsx</code>, no compile step), bound to <strong>127.0.0.1 only</strong>.</p>
   <table>
-    <thead><tr><th>상태</th><th>이유</th></tr></thead>
+    <thead><tr><th>Method &amp; path</th><th>Handler</th><th>What it does</th></tr></thead>
     <tbody>
-      <tr><td><code>url</code></td><td>입력창 값(controlled input)</td></tr>
-      <tr><td><code>format: Format</code></td><td><code>"mp3" | "mp4"</code> — 잘못된 값은 컴파일 단계에서 막힘</td></tr>
-      <tr><td><code>busy</code></td><td>버튼 비활성화 / "Downloading…" 표시</td></tr>
-      <tr><td><code>log</code></td><td>스트리밍 진행 텍스트, <code>&lt;pre&gt;</code>에 표시</td></tr>
-      <tr><td><code>status</code></td><td><code>{ kind: "ok" | "err"; text; file? } | null</code> — 결과 줄</td></tr>
+      <tr><td><code>POST /api/download</code></td><td><code>handleDownload</code></td><td>validate → serialize → run → stream log</td></tr>
+      <tr><td><code>GET /api/file/&lt;name&gt;</code></td><td><code>handleFile</code></td><td>stream a finished file as a download</td></tr>
+      <tr><td><code>GET &lt;else&gt;</code></td><td><code>serveFrontend</code></td><td>serve the built SPA from <code>dist/</code></td></tr>
     </tbody>
   </table>
-  <p><code>format</code>은 <code>types.ts</code>의 <code>Format</code> union을 써서, 라디오가 유효한 값만 설정하게 합니다.</p>
-
-  <h3>3.3 제출 핸들러 — 같은 스트리밍 규약을 React로</h3>
-  <p><code>handleSubmit</code>은 네트워크 스트림을 await 하므로 <code>async</code>입니다. 순서:</p>
-  <ol>
-    <li><code>e.preventDefault()</code> — 폼이 페이지를 새로고침하지 않게(SPA니까).</li>
-    <li>상태 초기화(<code>busy=true</code>, <code>log</code>/<code>status</code> 비움).</li>
-    <li><code>fetch("/api/download", { method:"POST", body: JSON.stringify({ url, format }) })</code>. <code>!res.ok</code>(400/429)면 본문 텍스트를 읽어 예외로 던짐.</li>
-    <li><strong>스트림 본문을 조각씩 읽기</strong> — <code>res.body.getReader()</code> + <code>TextDecoder</code>, <code>for (;;)</code> 루프에서 <code>done</code>이면 <code>break</code>, 각 조각을 <code>log</code>에 누적해 실시간 표시.</li>
-    <li>누적 텍스트를 표식과 매칭: <code>__FILE__ &lt;name&gt;</code> → "ok" 상태 + 자동 다운로드; <code>__ERROR__ &lt;message&gt;</code> → 예외.</li>
-    <li><code>catch</code>가 모든 실패를 "err" 상태로 모음(<code>err instanceof Error</code>로 unknown에서 메시지를 안전하게 추출).</li>
-    <li><code>finally</code>가 항상 버튼을 다시 풀어줌.</li>
-  </ol>
-  <p>JSX는 조건부로 렌더합니다: <code>{status &amp;&amp; …}</code>는 결과가 있을 때만, <code>{log &amp;&amp; &lt;pre&gt;…}</code>는 로그가 있을 때만 표시.
-  표식 규약은 이전과 동일하고, DOM 갱신만 이제 React 상태를 거칩니다(수동 <code>document</code> 조작 대신).</p>
-
-  <h2>4. 서버 (<code>server/server.ts</code>)</h2>
-  <p>순수 <code>node:http</code>, 이제 TypeScript(컴파일 없이 <code>tsx</code>가 직접 실행). <strong>127.0.0.1 에만 바인딩</strong>하여
-  네트워크에서 직접 닿을 수 없습니다 — VPS에서도 nginx가 공개 면을 담당합니다.</p>
-
-  <h3>4.1 라우팅</h3>
-  <table>
-    <thead><tr><th>메서드 &amp; 경로</th><th>핸들러</th><th>역할</th></tr></thead>
-    <tbody>
-      <tr><td><code>POST /api/download</code></td><td><code>handleDownload</code></td><td>검증, 작업 실행, 로그 스트리밍</td></tr>
-      <tr><td><code>GET /api/file/&lt;name&gt;</code></td><td><code>handleFile</code></td><td>완성 파일을 다운로드로 스트리밍</td></tr>
-      <tr><td><code>GET &lt;그 외&gt;</code></td><td><code>serveFrontend</code></td><td><code>dist/</code>의 빌드된 SPA 서빙</td></tr>
-    </tbody>
-  </table>
-
-  <h3>4.2 한 번에 한 작업</h3>
-  <p>모듈 레벨 <code>let busy = false</code>가 다운로드를 직렬화: 작업 중이면 <strong>429</strong> 거부, 자식 프로세스의
-  <code>error</code>/<code>close</code>에서 다시 풀어줌. VPS RAM이 2GB이고, 직렬 작업이 스트리밍 로그를 깔끔하게 유지합니다.</p>
-
-  <h3>4.3 요청 검증</h3>
   <ul>
-    <li><strong><code>url</code></strong> — <code>isValidYouTubeUrl()</code>이 <code>new URL()</code>로 파싱(틀리면 throw하므로 <code>try/catch</code>)하고
-    <code>https:</code> <strong>그리고</strong> 호스트 화이트리스트(<code>youtube.com</code>, <code>www.</code>/<code>m.</code>/<code>music.youtube.com</code>, <code>youtu.be</code>)를 요구.
-    <code>raw is string</code> 타입 가드라서, true를 반환한 뒤 TS가 <code>url</code>을 string으로 좁혀줌.</li>
-    <li><strong><code>format</code></strong> — 정확히 <code>"mp3"</code> 또는 <code>"mp4"</code>.</li>
-  </ul>
-  <p>검증은 <strong>무엇을 spawn하기 전에</strong> 끝납니다. 본문은 4KB로 제한(작은 JSON만 기대).</p>
-
-  <h3>4.4 다운로드 실행 + 로그 스트리밍</h3>
-  <ol>
-    <li>실행 전 <code>downloads/</code>의 파일 이름들을 <code>Set</code>(<code>before</code>)에 기록 — 끝난 뒤 새 파일을 찾기 위함.</li>
-    <li><code>200</code> + <code>text/plain</code> + <code>no-cache</code>를 먼저 보내고 응답을 실시간 로그 채널로 열어둠.</li>
-    <li>스크립트 실행 — 의도된 두 가지:
-<pre><code>const child = spawn("bash", [SCRIPT, url, format, DOWNLOADS_DIR], { cwd: PROJECT });</code></pre>
-      <ul>
-        <li><strong>인자 배열, 셸 문자열 아님</strong> → <code>url</code>이 별도 인자라 셸 보간이 없고 명령 주입 불가.</li>
-        <li><strong><code>bash &lt;script&gt;</code>로 실행</strong> → exec 비트와 무관하게 shebang과 <code>set -o pipefail</code> 적용.</li>
-      </ul>
-    </li>
-    <li><code>child.stdout</code>/<code>stderr</code>를 <code>res.write(d)</code>로 응답에 흘려보냄 — 실시간 로그.</li>
-  </ol>
-  <p>종료 시: <code>error</code> → <code>__ERROR__</code>; 0이 아닌 종료 → <code>__ERROR__ download failed</code>;
-  종료 0 → <code>before</code>와 비교해 새 파일들 중 <code>mtimeMs</code> 최신(<code>newestFile()</code>의 <code>for…of</code>)을 골라 <code>__FILE__ &lt;name&gt;</code>로 끝냄.
-  이 "새 파일 차집합"이 yt-dlp의 보고 없이 결과 파일명을 알아내는 방법입니다.</p>
-
-  <h3>4.5 SPA와 완성 파일 서빙</h3>
-  <ul>
-    <li><code>serveFrontend</code>는 <code>dist/</code>를 서빙. <code>/</code> → <code>dist/index.html</code>; 그 외 경로는 <code>dist/</code> 아래로 매핑
-    (<code>startsWith(DIST_DIR)</code>로 <code>../</code> 탈출 차단 + 확장자별 Content-Type), 없으면 <code>index.html</code>로 폴백.
-    <code>dist/</code>가 아직 없으면 "<code>npm run dev</code> 쓰라"는 안내 반환(개발에선 Vite가 UI 담당, 이 서버는 /api 만).</li>
-    <li><code>handleFile</code>의 핵심은 <strong>경로 탈출 방지</strong>: <code>path.basename(name)</code>이 디렉터리 부분을 제거해
-    <code>../../etc/passwd</code>가 <code>downloads/</code>를 벗어날 수 없음. 이어서 <code>stat</code> 후 <code>Content-Disposition: attachment</code>(UTF-8 파일명 → 한글 제목 안전)와
-    <code>fs.createReadStream(file).pipe(res)</code>(스트림이라 80MB mp4도 메모리에 안 올림).</li>
+    <li><strong>One job at a time:</strong> a <code>busy</code> flag → <code>429</code> while a job runs (2 GB RAM target; clean log).</li>
+    <li><strong>Validation:</strong> <code>isValidYouTubeUrl()</code> requires <code>https:</code> + a host allowlist; <code>format</code> ∈ {mp3, mp4}. Body capped at 4 KB. All <em>before</em> spawning.</li>
+    <li><strong>Run + stream:</strong> snapshot <code>downloads/</code> → <code>spawn("bash", [SCRIPT, url, format, dir])</code> (<strong>args array → no shell injection</strong>; via <code>bash</code> so the shebang/<code>pipefail</code> apply) → pipe stdout/stderr to the response → on exit 0, the newest new file is the result (<code>__FILE__ &lt;name&gt;</code>).</li>
+    <li><strong>Serve file:</strong> <code>path.basename(name)</code> blocks path traversal; <code>Content-Disposition: attachment</code> (UTF-8 filename); piped with <code>createReadStream</code> (an 80 MB MP4 never sits in memory).</li>
   </ul>
 
-  <h2>5. 다운로드 스크립트 (<code>download.sh</code>)</h2>
-  <p>vanilla 버전과 동일 — 앱은 이걸 블랙박스로 취급(인자 3개 입력, 파일 출력, 성공 시 exit 0). 서버는
-  <code>bash download.sh "&lt;URL&gt;" "&lt;mp3|mp4&gt;" "&lt;OUTDIR&gt;"</code>로 호출. <code>set -euo pipefail</code> 아래
-  <code>$OUTDIR/%(title)s.%(ext)s</code>에 씀:</p>
-  <ul>
-    <li><strong>MP3</strong> — <code>bestaudio</code>를 추출/재인코딩해 64K MP3.</li>
-    <li><strong>MP4</strong> — ≤1440p 최고 영상 + 최고 오디오를 mp4로 병합(ffmpeg).</li>
-    <li><code>--no-mtime</code>가 출력 타임스탬프를 "지금"으로 설정 → §4.4의 새 파일 탐지가 신뢰성 있게 동작.</li>
-  </ul>
-  <p>서버는 스크립트의 <em>규약</em>에만 의존하므로, 여기 플래그를 바꿔도 <code>server.ts</code>는 건드릴 필요 없음.</p>
+  <h2>5. The download script (<code>download.sh</code>)</h2>
+  <p>The app treats it as a black box: three args in, a file out, exit 0. It runs under <code>set -euo pipefail</code> and writes to
+  <code>$OUTDIR/%(title)s.%(ext)s</code>. <strong>MP3</strong> = bestaudio → 64K mp3; <strong>MP4</strong> = ≤1440p video + best audio
+  merged; <code>--no-mtime</code> sets the output time to "now" (which makes the newest-file detection reliable). Change any flag here
+  without touching <code>server.ts</code>.</p>
 
-  <h2>6. 개발 vs 운영</h2>
+  <h2>6. Dev vs production</h2>
   <ul>
-    <li><strong>개발</strong>(<code>npm run dev</code>): <code>concurrently</code>로 두 프로세스 — Vite <code>127.0.0.1:5173</code>(React 핫리로드)와
-    API 서버 <code>5174</code>(<code>PORT=5174 tsx watch server/server.ts</code>). <code>vite.config.ts</code>가 <code>/api/*</code>를 5173 → 5174로 프록시해
-    브라우저는 그냥 <code>fetch("/api/...")</code>(CORS 불필요). <code>App.tsx</code> 수정은 즉시 반영, <code>server.ts</code> 수정은 <code>tsx watch</code>가 API 재시작.</li>
-    <li><strong>운영</strong>(<code>npm run build</code> → <code>npm start</code>): <code>build</code>가 두 tsconfig를 타입체크하고 앱을 <code>dist/</code>로 번들;
-    <code>start</code>가 <code>tsx server/server.ts</code>를 실행해 <code>dist/</code> <strong>와</strong> <code>/api</code>를 한 포트(5173)에서 서빙. VPS(PLAN §9)가 nginx 뒤에서 돌리는 게 바로 이것.</li>
+    <li><strong>Dev</strong> (<code>npm run dev</code>): <code>concurrently</code> runs Vite on <code>5173</code> (React + hot-reload) and the API on
+    <code>5174</code> (<code>tsx watch</code>); <code>vite.config.ts</code> proxies <code>/api/*</code> → 5174, so the browser just calls <code>fetch("/api/...")</code>.</li>
+    <li><strong>Production</strong> (<code>npm run build</code> → <code>npm start</code>): typecheck + bundle to <code>dist/</code>, then <code>tsx server/server.ts</code>
+    serves <code>dist/</code> <strong>and</strong> <code>/api</code> on one port. This is what the VPS (PLAN §10) runs behind nginx.</li>
   </ul>
 
-  <h2>7. 설계 결정 한눈에</h2>
+  <h2>7. Design decisions</h2>
   <ul>
-    <li><strong>React + TypeScript, Vite 빌드.</strong> 타입 있는 컴포넌트 UI + 핫리로드 — 빌드 단계와 <code>node_modules</code>가 그 비용(v2의 의도된 트레이드).</li>
-    <li><strong>운영에선 한 서버가 정적+API 둘 다.</strong> 별도 정적 호스트 없이 <code>server.ts</code>가 <code>dist/</code>와 <code>/api</code>를 함께 → 배포는 여전히 "nginx 뒤 프로세스 하나".</li>
-    <li><strong>127.0.0.1 바인딩.</strong> 앱은 공개 면이 아님; VPS에선 nginx가 TLS 종료 + 비번 강제 + 리버스 프록시.</li>
-    <li><strong>스트리밍 응답 = 로그.</strong> POST 응답 하나가 실시간 로그이고 마지막 줄이 결과 — WebSocket/폴링 불필요.</li>
-    <li><strong>구조적 보안.</strong> 인자배열 spawn(주입 불가), 호스트 화이트리스트(SSRF 불가), 파일 서빙의 <code>path.basename</code>(경로 탈출 불가), 4KB 본문 제한, 작업 직렬화.</li>
+    <li><strong>React + TypeScript, Vite-built.</strong> A typed, component-based UI with hot-reload — at the cost of a build step + <code>node_modules</code>.</li>
+    <li><strong>One server for static + API in prod.</strong> Deployment is "one process behind nginx".</li>
+    <li><strong>Bind to <code>127.0.0.1</code>.</strong> The app is never the public face; on the VPS, nginx terminates TLS + enforces the password.</li>
+    <li><strong>Streaming response as the log.</strong> The single POST response <em>is</em> the live log; its last line is the result — no WebSocket/polling.</li>
+    <li><strong>Security by construction.</strong> Args-array spawn, host allowlist, <code>path.basename</code>, a 4 KB body cap, serialized jobs.</li>
   </ul>
 
-  <h2>8. 실행</h2>
-<pre><code># 사전 준비 (macOS)
-brew install yt-dlp ffmpeg node
-
-# JS 의존성 1회 설치
+  <h2>8. Running it</h2>
+<pre><code>brew install yt-dlp ffmpeg node
 npm install
+npm run dev                  # → http://127.0.0.1:5173  (hot-reload)
+# or the production build:
+npm run build &amp;&amp; npm start    # → http://127.0.0.1:5173</code></pre>
+  <p>Paste a link, pick MP3/MP4, hit Download. The log streams live; the file lands in <code>downloads/</code> and the browser download
+  starts automatically. For HTTPS + a password on a VPS, see <code>PLAN.md</code> §10 (Phase 3). For the upcoming native app, see §9 (Phase 2).</p>
 
-# 핫리로드 개발 (Vite + API)
-npm run dev          # → http://127.0.0.1:5173
-
-# 또는 운영 빌드를 로컬에서
-npm run build &amp;&amp; npm start   # → http://127.0.0.1:5173</code></pre>
-  <p>페이지를 열고, 유튜브 링크를 붙여넣고, MP3/MP4를 고른 뒤 Download. 로그가 실시간으로 흐르고, 파일은
-  <code>downloads/</code>에 떨어지며 브라우저 다운로드가 자동 시작됩니다.</p>
-  <p>VPS에서 HTTPS + 비밀번호 뒤에 두는 방법은 <code>PLAN.md</code> §9(Phase B) 참고.</p>
-
-  <div class="foot">ytdown — React + TypeScript 구현 설명 · 개인 사용 전용.</div>
+  <div class="foot">ytdown — React + TypeScript implementation walkthrough (Phase 1) · personal use only.</div>
 
 </div>
 </body>

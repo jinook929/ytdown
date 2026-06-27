@@ -4,6 +4,8 @@ A walkthrough of how **ytdown** is actually implemented, based on the code as it
 
 The app is a **React + TypeScript** single-page UI (built with Vite) talking to a small **TypeScript Node server**. The server runs your `yt-dlp` command, streams the live log back to the browser, and hands you the finished file. The download contract is unchanged from the original vanilla version — only the UI and the server's language/build changed.
 
+> **Where this fits in the 3-phase plan:** this walkthrough describes **Phase 1** — the local browser + server app, the part that exists today. **Phase 2** (a macOS native app via **Tauri**, reusing this same React UI through a Rust backend) and **Phase 3** (the VPS deploy) are described in `PLAN.md`. This document will gain a Phase-2 section once that app is built; for now it documents the working Phase-1 code.
+
 ---
 
 ## 1. The big picture
