@@ -137,3 +137,28 @@ pre.log {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+/* First-run install guide (native app). */
+.guide-text {
+  margin: 0 0 0.9em;
+  font-size: 0.95rem;
+}
+pre.cmd {
+  margin: 0 0 16px;
+  background: var(--code-bg);
+  color: var(--code-fg);
+  padding: 14px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  user-select: all;
+  overflow-x: auto;
+}
+.guide-actions {
+  display: flex;
+  gap: 12px;
+}
+button.secondary {
+  background: transparent;
+  color: var(--accent);
+  border: 1px solid var(--border);
+}

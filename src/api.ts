@@ -33,6 +33,13 @@ export async function download(
     : downloadViaFetch(url, format, onLog);
 }
 
+// Native only: names of required external tools that are missing (empty = all present).
+// Used by the first-run install guide. Never called in the browser build.
+export async function checkDeps(): Promise<string[]> {
+  const { invoke } = await import("@tauri-apps/api/core");
+  return invoke<string[]>("check_deps");
+}
+
 // ── Phase 2: Tauri (invoke + 이벤트) ──
 async function downloadViaTauri(
   url: string,

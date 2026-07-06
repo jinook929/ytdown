@@ -8,10 +8,10 @@
 //   번역하거나 제거할 것. (요청: 2026-06-27, 학습 목적)
 // ───────────────────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import type { Format } from "./types";
-import { download, isTauri } from "./api";
+import { checkDeps, download, isTauri } from "./api";
 
 // 네이티브 창인지 한 번만 계산해 둠(렌더/분기에서 재사용). 실행 중 바뀌지 않음.
 const NATIVE = isTauri();
@@ -25,6 +25,22 @@ export function App() {
   const [status, setStatus] = useState<
     { kind: "ok" | "err"; text: string; file?: string } | null
   >(null);
+
+  // First-run dependency gate (native app only). null = still checking;
+  // [] = all present; ["yt-dlp", …] = these must be installed before use.
+  // In the browser the tools live on the server, so we skip the check entirely.
+  const [missing, setMissing] = useState<string[] | null>(NATIVE ? null : []);
+
+  function recheckDeps() {
+    if (!NATIVE) return;
+    setMissing(null);
+    checkDeps()
+      .then(setMissing)
+      .catch(() => setMissing([]));
+  }
+
+  // Run the check once on mount (native only).
+  useEffect(recheckDeps, []);
 
   async function handleSubmit(e: FormEvent) {
     // 폼 기본 새로고침 막기(SPA).
@@ -67,65 +83,110 @@ export function App() {
       <h1>YouTube Downloader</h1>
       <p className="sub">Paste a link, pick a format, download as MP3 or MP4.</p>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="url"
-          placeholder="Paste a YouTube link"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          required
-          autoComplete="off"
-          spellCheck={false}
-        />
-
-        <fieldset>
-          <label className="fmt">
+      {missing === null ? (
+        <p className="note">Checking dependencies…</p>
+      ) : missing.length > 0 ? (
+        <InstallGuide missing={missing} onRecheck={recheckDeps} />
+      ) : (
+        <>
+          <form onSubmit={handleSubmit}>
             <input
-              type="radio"
-              name="format"
-              checked={format === "mp4"}
-              onChange={() => setFormat("mp4")}
+              type="url"
+              placeholder="Paste a YouTube link"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              required
+              autoComplete="off"
+              spellCheck={false}
             />
-            MP4 (video)
-          </label>
-          <label className="fmt">
-            <input
-              type="radio"
-              name="format"
-              checked={format === "mp3"}
-              onChange={() => setFormat("mp3")}
-            />
-            MP3 (audio)
-          </label>
-        </fieldset>
 
-        <button type="submit" disabled={busy}>
-          {busy ? "Downloading…" : "Download"}
-        </button>
-      </form>
+            <fieldset>
+              <label className="fmt">
+                <input
+                  type="radio"
+                  name="format"
+                  checked={format === "mp4"}
+                  onChange={() => setFormat("mp4")}
+                />
+                MP4 (video)
+              </label>
+              <label className="fmt">
+                <input
+                  type="radio"
+                  name="format"
+                  checked={format === "mp3"}
+                  onChange={() => setFormat("mp3")}
+                />
+                MP3 (audio)
+              </label>
+            </fieldset>
 
-      {status && (
-        <p className={`status ${status.kind}`}>
-          {status.text}{" "}
-          {status.file &&
-            // 네이티브: 이미 로컬에 저장됐으니 경로만 표시. 브라우저: 다운로드 링크.
-            (NATIVE ? (
-              <span>{status.file}</span>
-            ) : (
-              <a href={`/api/file/${encodeURIComponent(status.file)}`} download={status.file}>
-                {status.file}
-              </a>
-            ))}
-        </p>
+            <button type="submit" disabled={busy}>
+              {busy ? "Downloading…" : "Download"}
+            </button>
+          </form>
+
+          {status && (
+            <p className={`status ${status.kind}`}>
+              {status.text}{" "}
+              {status.file &&
+                // 네이티브: 이미 로컬에 저장됐으니 경로만 표시. 브라우저: 다운로드 링크.
+                (NATIVE ? (
+                  <span>{status.file}</span>
+                ) : (
+                  <a href={`/api/file/${encodeURIComponent(status.file)}`} download={status.file}>
+                    {status.file}
+                  </a>
+                ))}
+            </p>
+          )}
+
+          {log && <pre className="log">{log}</pre>}
+
+          <p className="note">
+            {NATIVE
+              ? "Native app. Files are saved to your Downloads folder."
+              : "Local, single-user. Files are saved to downloads/."}
+          </p>
+        </>
       )}
-
-      {log && <pre className="log">{log}</pre>}
-
-      <p className="note">
-        {NATIVE
-          ? "Native app. Files are saved to your Downloads folder."
-          : "Local, single-user. Files are saved to downloads/."}
-      </p>
     </main>
+  );
+}
+
+// First-run guide shown (native only) when required command-line tools are missing.
+// All copy is intentionally in English regardless of the app's language.
+function InstallGuide({
+  missing,
+  onRecheck,
+}: {
+  missing: string[];
+  onRecheck: () => void;
+}) {
+  const cmd = `brew install ${missing.join(" ")}`;
+  return (
+    <section className="guide">
+      <p className="status err">Setup needed — some required tools are missing.</p>
+      <p className="guide-text">
+        This app relies on command-line tools that aren’t installed yet:{" "}
+        <strong>{missing.join(", ")}</strong>.
+      </p>
+      <p className="guide-text">
+        Open <strong>Terminal</strong> and run:
+      </p>
+      <pre className="cmd">{cmd}</pre>
+      <div className="guide-actions">
+        <button type="button" onClick={() => navigator.clipboard?.writeText(cmd)}>
+          Copy command
+        </button>
+        <button type="button" className="secondary" onClick={onRecheck}>
+          Re-check
+        </button>
+      </div>
+      <p className="note">
+        Requires <strong>Homebrew</strong>. If you don’t have it, install it from
+        brew.sh first, then run the command above and click Re-check.
+      </p>
+    </section>
   );
 }

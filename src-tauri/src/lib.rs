@@ -66,6 +66,36 @@ fn downloads_dir() -> PathBuf {
     std::env::temp_dir()
 }
 
+// PATH used to locate external tools. A Finder-launched .app has a minimal PATH,
+// so we prepend the common Homebrew locations (Apple Silicon + Intel). Shared by
+// the downloader and the dependency check so both look in the exact same places.
+fn augmented_path() -> String {
+    format!(
+        "/opt/homebrew/bin:/usr/local/bin:{}",
+        std::env::var("PATH").unwrap_or_default()
+    )
+}
+
+// Whether `bin` exists as a file in any directory of the given PATH string.
+fn which_in(path_env: &str, bin: &str) -> bool {
+    path_env
+        .split(':')
+        .filter(|d| !d.is_empty())
+        .any(|dir| Path::new(dir).join(bin).is_file())
+}
+
+// External tools the download pipeline needs. Returned to the frontend so it can
+// show a first-run install guide when any of them are missing.
+#[tauri::command]
+fn check_deps() -> Vec<String> {
+    let path = augmented_path();
+    ["yt-dlp", "ffmpeg", "deno"]
+        .into_iter()
+        .filter(|bin| !which_in(&path, bin))
+        .map(str::to_string)
+        .collect()
+}
+
 // 실제 다운로드(블로킹). spawn_blocking 위에서 호출되어 UI(웹뷰)를 막지 않습니다.
 fn run_download(app: AppHandle, url: String, format: String) -> Result<String, String> {
     // 검증은 무엇을 실행하기 전에 먼저.
@@ -91,10 +121,7 @@ fn run_download(app: AppHandle, url: String, format: String) -> Result<String, S
 
     // Finder에서 실행된 .app은 PATH가 제한되어 brew의 yt-dlp/ffmpeg를 못 찾습니다.
     // 그래서 Homebrew 경로를 PATH 앞에 붙여 줍니다(개발/터미널 실행에도 안전).
-    let path_env = format!(
-        "/opt/homebrew/bin:/usr/local/bin:{}",
-        std::env::var("PATH").unwrap_or_default()
-    );
+    let path_env = augmented_path();
 
     // bash download.sh <url> <format> <outdir> — 인자를 "배열"로 전달(셸 문자열 아님 → 주입 불가).
     let mut child = Command::new("bash")
@@ -179,7 +206,7 @@ pub fn run() {
             Ok(())
         })
         // 위 download 커맨드를 프런트엔드에서 invoke 할 수 있도록 등록.
-        .invoke_handler(tauri::generate_handler![download])
+        .invoke_handler(tauri::generate_handler![download, check_deps])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
